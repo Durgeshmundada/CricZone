@@ -1,0 +1,62 @@
+node_modules/
+.env
+DurgeshSSh
+DurgeshSSh.pub
+# ===================================
+# Node.js & Backend
+# ===================================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+
+# Logs
+logs/
+*.log
+debug.log
+error.log
+out.log
+
+# Temporary and cache files
+tmp/
+temp/
+.cache/
+dist/
+build/
+coverage/
+.DS_Store
+
+# ===================================
+# Frontend (if using HTML/CSS/JS or React)
+# ===================================
+frontend/node_modules/
+frontend/build/
+frontend/dist/
+frontend/.env
+
+# ===================================
+# System / Editor files
+# ===================================
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# ===================================
+# Miscellaneous
+# ===================================
+Thumbs.db
+.env.*
+*.bak
+*.swp
