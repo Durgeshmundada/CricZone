@@ -4,6 +4,9 @@ import dotenv from "dotenv";
 import cors from "cors";
 import path from "path";
 import { fileURLToPath } from "url";
+const connectDB = require("./config/db");
+connectDB();
+
 
 // Fix __dirname in ES modules
 const __filename = fileURLToPath(import.meta.url);

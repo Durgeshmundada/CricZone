@@ -11,14 +11,14 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 package-lock.json
-
+models
 # Environment variables
 .env
 .env.local
 .env.development
 .env.test
 .env.production
-
+config
 # Logs
 logs/
 *.log
