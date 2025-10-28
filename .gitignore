@@ -60,3 +60,5 @@ Thumbs.db
 .env.*
 *.bak
 *.swp
+package-lock.json
+package.json

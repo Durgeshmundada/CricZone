@@ -1,455 +1,208 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>CricZone - Score. Book. Compete.</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CricZone - Score. Book. Compete.</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles.css" />
 </head>
+
 <body>
-    <!-- Navigation -->
-    <nav class="navbar" id="navbar">
-        <div class="nav-container">
-            <div class="nav-logo">
-                <span class="cricket-emoji">🏏</span>
-                <span class="logo-text">CricZone</span>
-            </div>
-            <div class="nav-links" id="navLinks">
-                <a href="#" data-page="home" class="nav-link active">Home</a>
-                <a href="#" data-page="host-match" class="nav-link">Host Match</a>
-                <a href="#" data-page="score-match" class="nav-link">Score Match</a>
-                <a href="#" data-page="tournaments" class="nav-link">Tournaments</a>
-                <a href="#" data-page="my-stats" class="nav-link">My Stats</a>
-                <a href="#" data-page="book-turf" class="nav-link">Book Turf</a>
-            </div>
-            <div class="mobile-menu-btn" id="mobileMenuBtn">
-                <span></span>
-                <span></span>
-                <span></span>
-            </div>
-        </div>
-    </nav>
+  <!-- ✅ Navigation -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-logo">
+        <span class="cricket-emoji">🏏</span>
+        <span class="logo-text">CricZone</span>
+      </div>
 
-    <!-- Home Page -->
-    <div class="page active" id="home">
-        <!-- Hero Section -->
-        <section class="hero">
-            <div class="hero-bg">
-                <div class="floating-orb orb-1"></div>
-                <div class="floating-orb orb-2"></div>
-            </div>
-            <div class="hero-content">
-                <h1 class="hero-title">Score. Book. Compete.</h1>
-                <p class="hero-subtitle">Your complete cricket management platform</p>
-                <div class="hero-buttons">
-                    <button class="cta-btn primary" data-page="host-match">🏏 Host a Match</button>
-                    <button class="cta-btn secondary" data-page="tournaments">🏆 Join Tournament</button>
-                </div>
-            </div>
-        </section>
+      <div class="nav-links" id="navLinks">
+        <a href="#" class="nav-link active" data-page="home">Home</a>
+        <a href="#" class="nav-link" data-page="host-match">Host Match</a>
+        <a href="#" class="nav-link" data-page="score-match">Score Match</a>
+        <a href="#" class="nav-link" data-page="tournaments">Tournaments</a>
+        <a href="#" class="nav-link" data-page="my-stats">My Stats</a>
+        <a href="#" class="nav-link" data-page="book-turf">Book Turf</a>
+        <a href="#" class="nav-link" data-page="login" id="navLogin">Login</a>
+      </div>
 
-        <!-- Live Matches Section -->
-        <section class="section">
-            <div class="container">
-                <h2 class="section-title">🔴 Live Matches</h2>
-                <div class="matches-grid" id="liveMatchesGrid">
-                    <!-- Dynamically populated -->
-                </div>
-            </div>
-        </section>
-
-        <!-- Tournaments Section -->
-        <section class="section">
-            <div class="container">
-                <h2 class="section-title">🏆 Ongoing Tournaments</h2>
-                <div class="tournaments-grid" id="tournamentsGrid">
-                    <!-- Dynamically populated -->
-                </div>
-            </div>
-        </section>
+      <!-- Right side for user email / logout -->
+      <div class="nav-auth" id="navAuth" style="display:none;">
+        <span id="navUserEmail"></span>
+        <button id="logoutBtn" class="btn-logout">Logout</button>
+      </div>
     </div>
+  </nav>
 
-    <!-- Host Match Page -->
-    <div class="page" id="host-match">
-        <div class="container">
-            <div class="form-card">
-                <h2 class="form-title">🏏 Host a New Match</h2>
-                <form id="hostMatchForm">
-                    <div class="form-group">
-                        <label>Match Name</label>
-                        <input type="text" id="matchName" placeholder="e.g., Sunday League Match" required>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Match Type</label>
-                            <select id="matchType" required>
-                                <option value="">Select Type</option>
-                                <option value="T20">T20 (20 overs)</option>
-                                <option value="ODI">ODI (50 overs)</option>
-                                <option value="Test">Test Match</option>
-                                <option value="Custom">Custom Overs</option>
-                            </select>
-                        </div>
-                        <div class="form-group" id="customOversGroup" style="display: none;">
-                            <label>Number of Overs</label>
-                            <input type="number" id="customOvers" min="1" max="50" placeholder="Enter overs">
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Team A Name</label>
-                        <input type="text" id="teamAName" placeholder="Enter team name" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Team A Players</label>
-                        <textarea id="teamAPlayers" rows="3" placeholder="Player 1, Player 2, Player 3..." required></textarea>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Team B Name</label>
-                        <input type="text" id="teamBName" placeholder="Enter team name" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Team B Players</label>
-                        <textarea id="teamBPlayers" rows="3" placeholder="Player 1, Player 2, Player 3..." required></textarea>
-                    </div>
-
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label>Venue</label>
-                            <input type="text" id="venue" placeholder="Ground name or location" required>
-                        </div>
-                        <div class="form-group">
-                            <label>Match Date</label>
-                            <input type="date" id="matchDate" required>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label>Tournament (Optional)</label>
-                        <select id="tournamentSelect">
-                            <option value="">Not part of tournament</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" class="submit-btn">✨ Create Match</button>
-                </form>
-            </div>
+  <!-- PAGES -->
+  <!-- Home -->
+  <div class="page" id="home">
+    <section class="hero">
+      <div class="hero-bg">
+        <div class="floating-orb orb-1"></div>
+        <div class="floating-orb orb-2"></div>
+      </div>
+      <div class="hero-content">
+        <h1 class="hero-title">Score. Book. Compete.</h1>
+        <p class="hero-subtitle">Your Cricket Zone Awaits!</p>
+        <div class="hero-buttons">
+          <button class="cta-btn primary" data-page="host-match">🏏 Host a Match</button>
+          <button class="cta-btn secondary" data-page="tournaments">🏆 Join Tournament</button>
         </div>
-    </div>
+      </div>
+    </section>
 
-    <!-- Score Match Page -->
-    <div class="page" id="score-match">
-        <div class="container">
-            <div class="match-selection">
-                <label>Select Match to Score:</label>
-                <select id="selectMatch">
-                    <option value="">Choose a match...</option>
-                </select>
-            </div>
-
-            <div id="scoringInterface" style="display: none;">
-                <!-- Match Header -->
-                <div class="match-header">
-                    <div class="live-indicator">
-                        <span class="live-dot"></span>
-                        <span>LIVE</span>
-                    </div>
-                    <h2 id="matchTitle">Team A vs Team B</h2>
-                    <div class="floating-orb"></div>
-                </div>
-
-                <!-- Score Display -->
-                <div class="score-display">
-                    <div class="team-score batting">
-                        <h3 id="battingTeamName">Team A</h3>
-                        <div class="score-value" id="battingScore">0/0</div>
-                        <div class="overs-info" id="battingOvers">Overs: 0.0/20</div>
-                    </div>
-                    <div class="vs-separator">VS</div>
-                    <div class="team-score bowling">
-                        <h3 id="bowlingTeamName">Team B</h3>
-                        <div class="score-value" id="bowlingScore">Yet to bat</div>
-                        <div class="target-info" id="targetInfo"></div>
-                    </div>
-                </div>
-
-                <!-- Current Batsmen -->
-                <div class="current-batsmen">
-                    <div class="batsman-card striker">
-                        <div class="batsman-label">Striker</div>
-                        <select id="striker" class="player-select">
-                            <option value="">Select Batsman</option>
-                        </select>
-                        <div class="batsman-stats" id="strikerStats">
-                            <span>0</span>
-                            <span>0</span>
-                            <span>0.00</span>
-                        </div>
-                        <div class="stats-labels">
-                            <span>Runs</span>
-                            <span>Balls</span>
-                            <span>SR</span>
-                        </div>
-                    </div>
-                    <div class="batsman-card">
-                        <div class="batsman-label">Non-Striker</div>
-                        <select id="nonStriker" class="player-select">
-                            <option value="">Select Batsman</option>
-                        </select>
-                        <div class="batsman-stats" id="nonStrikerStats">
-                            <span>0</span>
-                            <span>0</span>
-                            <span>0.00</span>
-                        </div>
-                        <div class="stats-labels">
-                            <span>Runs</span>
-                            <span>Balls</span>
-                            <span>SR</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Current Bowler -->
-                <div class="current-bowler">
-                    <div class="bowler-card">
-                        <div class="bowler-label">Current Bowler</div>
-                        <select id="currentBowler" class="player-select">
-                            <option value="">Select Bowler</option>
-                        </select>
-                        <div class="bowler-stats" id="bowlerStats">
-                            <span>0.0</span>
-                            <span>0</span>
-                            <span>0</span>
-                        </div>
-                        <div class="stats-labels">
-                            <span>Overs</span>
-                            <span>Runs</span>
-                            <span>Wickets</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Scoring Buttons -->
-                <div class="scoring-buttons">
-                    <button class="score-btn" onclick="addRuns(0)">0</button>
-                    <button class="score-btn" onclick="addRuns(1)">1</button>
-                    <button class="score-btn" onclick="addRuns(2)">2</button>
-                    <button class="score-btn" onclick="addRuns(3)">3</button>
-                    <button class="score-btn four" onclick="addRuns(4)">4</button>
-                    <button class="score-btn six" onclick="addRuns(6)">6</button>
-                    <button class="score-btn wide" onclick="addExtra('wide')">WD</button>
-                    <button class="score-btn no-ball" onclick="addExtra('noball')">NB</button>
-                    <button class="score-btn out" onclick="showWicketModal()">OUT</button>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="action-buttons">
-                    <button class="action-btn undo" onclick="undoLastBall()">⏪ Undo</button>
-                    <button class="action-btn end-innings" onclick="endInnings()">End Innings</button>
-                    <button class="action-btn finish-match" onclick="endMatch()">Finish Match</button>
-                </div>
-            </div>
+    <section class="section">
+      <div class="container">
+        <h2 class="section-title">🔴 Live Matches</h2>
+        <div class="matches-grid" id="liveMatchesGrid">
+          <p style="text-align:center;">No live matches at the moment.</p>
         </div>
-    </div>
+      </div>
+    </section>
 
-    <!-- My Stats Page -->
-    <div class="page" id="my-stats">
-        <div class="container">
-            <div class="profile-header">
-                <div class="avatar">
-                    <span>RK</span>
-                </div>
-                <div class="profile-info">
-                    <h2 class="profile-name">Rajesh Kumar</h2>
-                    <p class="profile-role">All-rounder • Right-handed batsman • Right-arm medium</p>
-                    <div class="profile-meta">
-                        <span>Jersey #7</span>
-                        <span>📍 Nagpur</span>
-                        <span>Member since 2023</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <div class="stat-value">24</div>
-                    <div class="stat-label">Matches</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-value">587</div>
-                    <div class="stat-label">Total Runs</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-value">32.6</div>
-                    <div class="stat-label">Batting Avg</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-value">145.3</div>
-                    <div class="stat-label">Strike Rate</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-value">18</div>
-                    <div class="stat-label">Wickets</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-value">24.5</div>
-                    <div class="stat-label">Bowling Avg</div>
-                </div>
-            </div>
+    <section class="section">
+      <div class="container">
+        <h2 class="section-title">🏆 Ongoing Tournaments</h2>
+        <div class="tournaments-grid" id="tournamentsGrid">
+          <p style="text-align:center;">Stay tuned for tournaments!</p>
         </div>
-    </div>
+      </div>
+    </section>
+  </div>
 
-    <!-- Tournaments Page -->
-    <div class="page" id="tournaments">
-        <div class="container">
-            <div class="page-header">
-                <h2 class="page-title">🏆 Tournaments</h2>
-                <button class="create-btn" onclick="showCreateTournamentModal()">+ Create Tournament</button>
-            </div>
-            <div class="tournaments-list" id="tournamentsList">
-                <!-- Dynamically populated -->
-            </div>
-        </div>
-    </div>
+  <!-- Host Match -->
+  <div class="page" id="host-match">
+    <div class="container">
+      <div class="form-card">
+        <h2 class="form-title">🏏 Host a New Match</h2>
+        <form id="hostMatchForm">
+          <div class="form-group">
+            <label>Match Name</label>
+            <input type="text" id="matchName" placeholder="e.g., Sunday League Match" required />
+          </div>
 
-    <!-- Book Turf Page -->
-    <div class="page" id="book-turf">
-        <div class="container">
-            <div class="turf-hero">
-                <h2 class="page-title">🏟️ Book Your Turf</h2>
-            </div>
-            <div class="turf-list" id="turfList">
-                <!-- Dynamically populated -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Wicket Modal -->
-    <div class="modal" id="wicketModal">
-        <div class="modal-content">
-            <h3>Add Wicket Details</h3>
+          <div class="form-row">
             <div class="form-group">
-                <label>Dismissal Type</label>
-                <select id="wicketType" required>
-                    <option value="">Select Type</option>
-                    <option value="Bowled">Bowled</option>
-                    <option value="Caught">Caught</option>
-                    <option value="LBW">LBW</option>
-                    <option value="Stumped">Stumped</option>
-                    <option value="Run Out">Run Out</option>
-                    <option value="Hit Wicket">Hit Wicket</option>
-                </select>
+              <label>Match Type</label>
+              <select id="matchType" required>
+                <option value="">Select Type</option>
+                <option value="T20">T20 (20 overs)</option>
+                <option value="ODI">ODI (50 overs)</option>
+                <option value="Test">Test Match</option>
+                <option value="Custom">Custom Overs</option>
+              </select>
             </div>
-            <div class="form-group" id="fielderGroup" style="display: none;">
-                <label>Fielder</label>
-                <select id="fielder">
-                    <option value="">Select Fielder</option>
-                </select>
+            <div class="form-group" id="customOversGroup" style="display: none;">
+              <label>Number of Overs</label>
+              <input type="number" id="customOvers" min="1" max="50" placeholder="Enter overs" />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Team A Name</label>
+            <input type="text" id="teamAName" placeholder="Enter team name" required />
+          </div>
+
+          <div class="form-group">
+            <label>Team A Players</label>
+            <textarea id="teamAPlayers" rows="3" placeholder="Player 1, Player 2, Player 3..." required></textarea>
+          </div>
+
+          <div class="form-group">
+            <label>Team B Name</label>
+            <input type="text" id="teamBName" placeholder="Enter team name" required />
+          </div>
+
+          <div class="form-group">
+            <label>Team B Players</label>
+            <textarea id="teamBPlayers" rows="3" placeholder="Player 1, Player 2, Player 3..." required></textarea>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Venue</label>
+              <input type="text" id="venue" placeholder="Ground name or location" required />
             </div>
             <div class="form-group">
-                <label>New Batsman</label>
-                <select id="newBatsman" required>
-                    <option value="">Select Batsman</option>
-                </select>
+              <label>Match Date</label>
+              <input type="date" id="matchDate" required />
             </div>
-            <div class="modal-buttons">
-                <button class="modal-btn cancel" onclick="closeWicketModal()">Cancel</button>
-                <button class="modal-btn confirm" onclick="confirmWicket()">Confirm</button>
-            </div>
-        </div>
+          </div>
+
+          <div class="form-group">
+            <label>Tournament (Optional)</label>
+            <select id="tournamentSelect">
+              <option value="">Not part of tournament</option>
+            </select>
+          </div>
+
+          <button type="submit" class="submit-btn">✨ Create Match</button>
+        </form>
+      </div>
     </div>
+  </div>
 
-    <!-- Tournament Modal -->
-    <div class="modal" id="tournamentModal">
-        <div class="modal-content">
-            <h3>Create New Tournament</h3>
-            <form id="tournamentForm">
-                <div class="form-group">
-                    <label>Tournament Name</label>
-                    <input type="text" id="tournamentName" required>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Format</label>
-                        <select id="tournamentFormat" required>
-                            <option value="">Select Format</option>
-                            <option value="Knockout">Knockout</option>
-                            <option value="League">League</option>
-                            <option value="League + Knockout">League + Knockout</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Match Type</label>
-                        <select id="tournamentMatchType" required>
-                            <option value="">Select Type</option>
-                            <option value="T20">T20</option>
-                            <option value="ODI">ODI</option>
-                        </select>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Start Date</label>
-                        <input type="date" id="tournamentStartDate" required>
-                    </div>
-                    <div class="form-group">
-                        <label>End Date</label>
-                        <input type="date" id="tournamentEndDate" required>
-                    </div>
-                </div>
-                <div class="form-row">
-                    <div class="form-group">
-                        <label>Number of Teams</label>
-                        <input type="number" id="tournamentTeams" min="4" max="16" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Prize Pool</label>
-                        <input type="text" id="tournamentPrize" placeholder="₹50,000">
-                    </div>
-                </div>
-                <div class="modal-buttons">
-                    <button type="button" class="modal-btn cancel" onclick="closeTournamentModal()">Cancel</button>
-                    <button type="submit" class="modal-btn confirm">Create Tournament</button>
-                </div>
-            </form>
-        </div>
+  <!-- Score Match -->
+  <div class="page" id="score-match">
+    <div class="container">
+      <h2 class="section-title">📊 Score a Match</h2>
+      <p>Feature under development.</p>
     </div>
+  </div>
 
-    <!-- Result Modal -->
-    <div class="modal" id="resultModal">
-        <div class="modal-content result-modal">
-            <h3 id="resultTitle">Match Result</h3>
-            <div class="result-details" id="resultDetails">
-                <!-- Dynamically populated -->
-            </div>
-            <button class="modal-btn confirm" onclick="closeResultModal()">Close</button>
-        </div>
+  <!-- Tournaments -->
+  <div class="page" id="tournaments">
+    <div class="container">
+      <h2 class="section-title">🏆 Tournaments</h2>
+      <p>Explore ongoing tournaments here soon!</p>
     </div>
+  </div>
 
-    <!-- Booking Modal -->
-    <div class="modal" id="bookingModal">
-        <div class="modal-content">
-            <h3>✅ Booking Confirmed!</h3>
-            <div class="booking-details">
-                <div class="booking-card">
-                    <p id="bookingTurfName"></p>
-                    <p id="bookingDate"></p>
-                    <p id="bookingTime">06:00 PM - 07:00 PM</p>
-                    <p class="booking-amount" id="bookingAmount"></p>
-                </div>
-            </div>
-            <button class="modal-btn confirm" onclick="closeBookingModal()">Close</button>
+  <!-- My Stats -->
+  <div class="page" id="my-stats">
+    <div class="container">
+      <div id="profile-section">
+        <h2 class="section-title">📈 My Stats</h2>
+        <div class="profile-card">
+          <p>Not logged in. Please login to view your stats.</p>
         </div>
+      </div>
     </div>
+  </div>
 
-    <!-- Toast Container -->
-    <div id="toastContainer"></div>
+  <!-- Book Turf -->
+  <div class="page" id="book-turf">
+    <div class="container">
+      <h2 class="section-title">🌿 Book a Turf</h2>
+      <div id="turfList" class="turf-grid"></div>
+    </div>
+  </div>
 
-    <script src="script.js"></script>
+  <!-- Login -->
+  <div class="page" id="login">
+    <div class="container">
+      <div class="form-card">
+        <h2 class="form-title">🔐 Login</h2>
+        <form id="loginForm">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" placeholder="Enter your email" required />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" placeholder="Enter your password" required />
+          </div>
+          <button type="submit" class="submit-btn">Login</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer"></div>
+
+  <script src="script.js"></script>
 </body>
 </html>

@@ -1,743 +1,689 @@
-// Global State
-let matches = [];
-let tournaments = [];
-let currentMatch = null;
-let ballHistory = [];
+// script.js – Complete CricZone Frontend
+console.log("✅ CricZone script.js loaded");
 
-// Sample Data
-const sampleMatches = [
-    {
-        id: 1,
-        name: "Sunday League Match",
-        teamA: { name: "Warriors", score: 165, wickets: 4, overs: 18.3 },
-        teamB: { name: "Challengers", score: 0, wickets: 0, overs: 0 },
-        type: "T20",
-        venue: "Central Ground",
-        status: "live",
-        isLive: true
-    },
-    {
-        id: 2,
-        name: "City Championship",
-        teamA: { name: "Kings XI", score: 189, wickets: 7, overs: 20 },
-        teamB: { name: "Super Giants", score: 145, wickets: 8, overs: 17.2 },
-        type: "T20",
-        venue: "Stadium A",
-        status: "completed",
-        isLive: false
+const API_BASE = "http://localhost:5000/api";
+
+document.addEventListener("DOMContentLoaded", () => {
+  const pages = Array.from(document.querySelectorAll(".page"));
+  const navLinks = Array.from(document.querySelectorAll(".nav-link"));
+  const ctaButtons = Array.from(document.querySelectorAll("[data-page]"));
+  const navAuth = document.getElementById("navAuth");
+  const navUserEmail = document.getElementById("navUserEmail");
+  const navLoginLink = document.getElementById("navLogin");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  // === PAGE NAVIGATION ===
+  function showPage(pageId) {
+    pages.forEach(p => p.style.display = p.id === pageId ? "block" : "none");
+    navLinks.forEach(l => l.classList.toggle("active", l.getAttribute("data-page") === pageId));
+
+    // Load data based on page
+    if (pageId === "home") loadHomePage();
+    if (pageId === "book-turf") loadTurfs();
+    if (pageId === "my-stats") loadUserProfile();
+    if (pageId === "tournaments") loadTournaments();
+    if (pageId === "login" && isLoggedIn()) showPage("home");
+  }
+
+  showPage("home");
+
+  // Attach navigation
+  [...navLinks, ...ctaButtons].forEach(el => {
+    const page = el.getAttribute("data-page");
+    if (page) el.addEventListener("click", (e) => { e.preventDefault(); showPage(page); });
+  });
+
+  // === AUTH FUNCTIONS ===
+  function isLoggedIn() {
+    return !!localStorage.getItem("token");
+  }
+
+  function setUserFromStorage() {
+    const userJson = localStorage.getItem("user");
+    if (userJson) {
+      try {
+        const user = JSON.parse(userJson);
+        navUserEmail.textContent = user.email || user.name || "";
+        navAuth.style.display = "flex";
+        navLoginLink.style.display = "none";
+      } catch {
+        navUserEmail.textContent = "";
+      }
+    } else {
+      navAuth.style.display = "none";
+      navLoginLink.style.display = "inline-block";
     }
-];
+  }
 
-const sampleTournaments = [
-    {
-        id: 1,
-        name: "Summer Cricket League 2024",
-        format: "League + Knockout",
-        matchType: "T20",
-        teams: 8,
-        matches: 28,
-        startDate: "2024-06-01",
-        endDate: "2024-06-30",
-        status: "ongoing",
-        prize: "₹50,000"
-    },
-    {
-        id: 2,
-        name: "Corporate Cricket Cup",
-        format: "Knockout",
-        matchType: "ODI",
-        teams: 12,
-        matches: 15,
-        startDate: "2024-07-15",
-        endDate: "2024-07-25",
-        status: "upcoming",
-        prize: "₹1,00,000"
+  setUserFromStorage();
+
+  logoutBtn?.addEventListener("click", () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setUserFromStorage();
+    showToast("Logged out", "info");
+    showPage("home");
+  });
+
+  // === LOGIN FORM ===
+  const loginForm = document.getElementById("loginForm");
+  loginForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const email = document.getElementById("loginEmail").value.trim();
+    const password = document.getElementById("loginPassword").value.trim();
+
+    if (!email || !password) return showToast("Please fill both fields", "error");
+
+    try {
+      const res = await fetch(`${API_BASE}/users/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        localStorage.setItem("token", data.token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+        setUserFromStorage();
+        showToast("Login successful", "success");
+        setTimeout(() => showPage("home"), 700);
+      } else {
+        showToast(data.message || "Invalid credentials", "error");
+      }
+    } catch (err) {
+      console.error("Login error:", err);
+      showToast("Server error. Try later.", "error");
     }
-];
+  });
 
-const sampleTurfs = [
-    {
-        id: 1,
-        name: "Green Valley Cricket Ground",
-        location: "Dharampeth, Nagpur",
-        rating: 4.8,
-        price: "₹1,500/hour",
-        availability: "Available Today",
-        emoji: "🏟️"
-    },
-    {
-        id: 2,
-        name: "Victory Sports Complex",
-        location: "Sitabuldi, Nagpur",
-        rating: 4.6,
-        price: "₹1,200/hour",
-        availability: "Available from 6 PM",
-        emoji: "🏏"
-    },
-    {
-        id: 3,
-        name: "Champion Turf Arena",
-        location: "Civil Lines, Nagpur",
-        rating: 4.9,
-        price: "₹2,000/hour",
-        availability: "Booking Required",
-        emoji: "⚡"
-    }
-];
+  // === HOST MATCH FORM ===
+  const hostMatchForm = document.getElementById("hostMatchForm");
+  const matchTypeSelect = document.getElementById("matchType");
+  const customOversGroup = document.getElementById("customOversGroup");
+  const tournamentSelect = document.getElementById("tournamentSelect");
 
-// Initialize
-document.addEventListener('DOMContentLoaded', function() {
-    matches = [...sampleMatches];
-    tournaments = [...sampleTournaments];
-    
-    initializeNavigation();
-    renderLiveMatches();
-    renderTournaments();
-    renderTournamentsList();
-    renderTurfList();
-    populateTournamentSelect();
-    setupFormHandlers();
-});
+  // Show/hide custom overs
+  matchTypeSelect?.addEventListener("change", () => {
+    customOversGroup.style.display = matchTypeSelect.value === "Custom" ? "block" : "none";
+  });
 
-// Navigation
-function initializeNavigation() {
-    const navLinks = document.querySelectorAll('.nav-link');
-    const mobileMenuBtn = document.getElementById('mobileMenuBtn');
-    const navLinksContainer = document.getElementById('navLinks');
-    const navbar = document.getElementById('navbar');
-    
-    navLinks.forEach(link => {
-        link.addEventListener('click', function(e) {
-            e.preventDefault();
-            const page = this.dataset.page;
-            navigateToPage(page);
-            
-            // Update active state
-            navLinks.forEach(l => l.classList.remove('active'));
-            this.classList.add('active');
-            
-            // Close mobile menu
-            navLinksContainer.classList.remove('active');
+  // Load tournaments into dropdown
+  async function loadTournamentOptions() {
+    try {
+      const res = await fetch(`${API_BASE}/tournaments`);
+      const data = await res.json();
+      if (res.ok && data.tournaments) {
+        tournamentSelect.innerHTML = '<option value="">Not part of tournament</option>';
+        data.tournaments.forEach(t => {
+          if (t.status === "upcoming" || t.status === "ongoing") {
+            tournamentSelect.innerHTML += `<option value="${t._id}">${escapeHtml(t.name)}</option>`;
+          }
         });
-    });
-    
-    // CTA buttons navigation
-    document.querySelectorAll('.cta-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const page = this.dataset.page;
-            navigateToPage(page);
-            
-            // Update nav active state
-            navLinks.forEach(l => l.classList.remove('active'));
-            document.querySelector(`[data-page="${page}"]`).classList.add('active');
-        });
-    });
-    
-    mobileMenuBtn.addEventListener('click', function() {
-        navLinksContainer.classList.toggle('active');
-    });
-    
-    // Scroll effect
-    window.addEventListener('scroll', function() {
-        if (window.scrollY > 50) {
-            navbar.classList.add('scrolled');
-        } else {
-            navbar.classList.remove('scrolled');
-        }
-    });
-}
-
-function navigateToPage(pageName) {
-    const pages = document.querySelectorAll('.page');
-    pages.forEach(page => page.classList.remove('active'));
-    
-    const targetPage = document.getElementById(pageName);
-    if (targetPage) {
-        targetPage.classList.add('active');
-        window.scrollTo({ top: 0, behavior: 'smooth' });
+      }
+    } catch (err) {
+      console.error("Failed to load tournaments:", err);
     }
-}
+  }
 
-// Render Functions
-function renderLiveMatches() {
-    const grid = document.getElementById('liveMatchesGrid');
-    const liveMatches = matches.filter(m => m.isLive);
+  loadTournamentOptions();
+
+  hostMatchForm?.addEventListener("submit", async (e) => {
+    e.preventDefault();
     
-    if (liveMatches.length === 0) {
-        grid.innerHTML = '<p style="text-align: center; color: #64748b;">No live matches at the moment</p>';
-        return;
+    if (!isLoggedIn()) {
+      showToast("Please login to host a match", "error");
+      showPage("login");
+      return;
     }
-    
-    grid.innerHTML = liveMatches.map(match => `
-        <div class="match-card">
-            <div class="live-indicator">
-                <span class="live-dot"></span>
-                <span>LIVE</span>
-            </div>
-            <div class="match-teams">${match.teamA.name} vs ${match.teamB.name}</div>
-            <div class="match-score">
-                ${match.teamA.score}/${match.teamA.wickets} (${match.teamA.overs})
-            </div>
-            <div class="match-status">${match.venue} • ${match.type}</div>
-        </div>
-    `).join('');
-}
 
-function renderTournaments() {
-    const grid = document.getElementById('tournamentsGrid');
-    const ongoingTournaments = tournaments.filter(t => t.status === 'ongoing');
-    
-    if (ongoingTournaments.length === 0) {
-        grid.innerHTML = '<p style="text-align: center; color: #64748b;">No ongoing tournaments</p>';
-        return;
-    }
-    
-    grid.innerHTML = ongoingTournaments.map(tournament => `
-        <div class="tournament-card">
-            <div class="tournament-name">${tournament.name}</div>
-            <div class="tournament-info">
-                <span>${tournament.format}</span>
-                <span>${tournament.matchType}</span>
-            </div>
-            <div class="tournament-stats">
-                <div class="stat">
-                    <div class="stat-value">${tournament.teams}</div>
-                    <div class="stat-label">Teams</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value">${tournament.matches}</div>
-                    <div class="stat-label">Matches</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value">${tournament.prize}</div>
-                    <div class="stat-label">Prize</div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderTournamentsList() {
-    const list = document.getElementById('tournamentsList');
-    
-    if (tournaments.length === 0) {
-        list.innerHTML = '<p style="text-align: center; color: #64748b;">No tournaments created yet</p>';
-        return;
-    }
-    
-    list.innerHTML = tournaments.map(tournament => `
-        <div class="tournament-item">
-            <div class="tournament-header">
-                <h3 class="tournament-name">${tournament.name}</h3>
-                <span class="status-badge ${tournament.status}">${tournament.status.toUpperCase()}</span>
-            </div>
-            <div class="tournament-info">
-                <span>📅 ${tournament.startDate} to ${tournament.endDate}</span>
-                <span>🏆 ${tournament.format}</span>
-                <span>🏏 ${tournament.matchType}</span>
-            </div>
-            <div class="tournament-stats">
-                <div class="stat">
-                    <div class="stat-value">${tournament.teams}</div>
-                    <div class="stat-label">Teams</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value">${tournament.matches}</div>
-                    <div class="stat-label">Matches</div>
-                </div>
-                <div class="stat">
-                    <div class="stat-value">${tournament.prize}</div>
-                    <div class="stat-label">Prize Pool</div>
-                </div>
-            </div>
-        </div>
-    `).join('');
-}
-
-function renderTurfList() {
-    const list = document.getElementById('turfList');
-    
-    list.innerHTML = sampleTurfs.map(turf => `
-        <div class="turf-card">
-            <div class="turf-image">
-                <span>${turf.emoji}</span>
-            </div>
-            <div class="turf-info">
-                <div>
-                    <h3 class="turf-name">${turf.name}</h3>
-                    <div class="turf-rating">⭐ ${turf.rating}/5.0</div>
-                    <div class="turf-location">📍 ${turf.location}</div>
-                    <div class="turf-availability">🕐 ${turf.availability}</div>
-                    <div class="turf-price">${turf.price}</div>
-                </div>
-                <button class="book-btn" onclick="bookTurf(${turf.id})">Book Now</button>
-            </div>
-        </div>
-    `).join('');
-}
-
-function populateTournamentSelect() {
-    const select = document.getElementById('tournamentSelect');
-    select.innerHTML = '<option value="">Not part of tournament</option>' +
-        tournaments.map(t => `<option value="${t.id}">${t.name}</option>`).join('');
-}
-
-// Form Handlers
-function setupFormHandlers() {
-    // Host Match Form
-    const hostMatchForm = document.getElementById('hostMatchForm');
-    const matchTypeSelect = document.getElementById('matchType');
-    const customOversGroup = document.getElementById('customOversGroup');
-    
-    matchTypeSelect.addEventListener('change', function() {
-        if (this.value === 'Custom') {
-            customOversGroup.style.display = 'block';
-        } else {
-            customOversGroup.style.display = 'none';
-        }
-    });
-    
-    hostMatchForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        createMatch();
-    });
-    
-    // Match Selection
-    const selectMatch = document.getElementById('selectMatch');
-    selectMatch.innerHTML = '<option value="">Choose a match...</option>' +
-        matches.map(m => `<option value="${m.id}">${m.name} - ${m.teamA.name} vs ${m.teamB.name}</option>`).join('');
-    
-    selectMatch.addEventListener('change', function() {
-        if (this.value) {
-            loadMatch(parseInt(this.value));
-        }
-    });
-    
-    // Striker/Non-striker change
-    document.getElementById('striker').addEventListener('change', updateBatsmanStats);
-    document.getElementById('nonStriker').addEventListener('change', updateBatsmanStats);
-    document.getElementById('currentBowler').addEventListener('change', updateBowlerStats);
-    
-    // Wicket Type Change
-    document.getElementById('wicketType').addEventListener('change', function() {
-        const fielderGroup = document.getElementById('fielderGroup');
-        if (this.value === 'Caught' || this.value === 'Stumped' || this.value === 'Run Out') {
-            fielderGroup.style.display = 'block';
-        } else {
-            fielderGroup.style.display = 'none';
-        }
-    });
-    
-    // Tournament Form
-    document.getElementById('tournamentForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        createTournament();
-    });
-}
-
-function createMatch() {
     const matchData = {
-        id: matches.length + 1,
-        name: document.getElementById('matchName').value,
-        type: document.getElementById('matchType').value,
-        teamA: {
-            name: document.getElementById('teamAName').value,
-            players: document.getElementById('teamAPlayers').value.split(',').map(p => p.trim()),
-            score: 0,
-            wickets: 0,
-            overs: 0
-        },
-        teamB: {
-            name: document.getElementById('teamBName').value,
-            players: document.getElementById('teamBPlayers').value.split(',').map(p => p.trim()),
-            score: 0,
-            wickets: 0,
-            overs: 0
-        },
-        venue: document.getElementById('venue').value,
-        date: document.getElementById('matchDate').value,
-        tournament: document.getElementById('tournamentSelect').value,
-        status: 'upcoming',
-        isLive: false,
-        innings: 1,
-        battingTeam: 'teamA',
-        currentBatsmen: [],
-        currentBowler: null,
-        ballByBall: []
+      matchName: document.getElementById("matchName").value.trim(),
+      matchType: document.getElementById("matchType").value,
+      customOvers: document.getElementById("customOvers")?.value || null,
+      teamAName: document.getElementById("teamAName").value.trim(),
+      teamAPlayers: document.getElementById("teamAPlayers").value.trim(),
+      teamBName: document.getElementById("teamBName").value.trim(),
+      teamBPlayers: document.getElementById("teamBPlayers").value.trim(),
+      venue: document.getElementById("venue").value.trim(),
+      matchDate: document.getElementById("matchDate").value,
+      tournamentId: document.getElementById("tournamentSelect").value || null
     };
-    
-    if (matchData.type === 'Custom') {
-        matchData.overs = parseInt(document.getElementById('customOvers').value);
-    } else {
-        matchData.overs = matchData.type === 'T20' ? 20 : matchData.type === 'ODI' ? 50 : 90;
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/matches`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify(matchData)
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast("Match created successfully! 🏏", "success");
+        hostMatchForm.reset();
+        setTimeout(() => showPage("home"), 1000);
+      } else {
+        showToast(data.message || "Failed to create match", "error");
+      }
+    } catch (err) {
+      console.error("Match creation error:", err);
+      showToast("Server error", "error");
     }
-    
-    matches.push(matchData);
-    showToast('Match created successfully!', 'success');
-    
-    // Update select dropdown
-    const selectMatch = document.getElementById('selectMatch');
-    selectMatch.innerHTML += `<option value="${matchData.id}">${matchData.name} - ${matchData.teamA.name} vs ${matchData.teamB.name}</option>`;
-    
-    // Reset form
-    document.getElementById('hostMatchForm').reset();
-    document.getElementById('customOversGroup').style.display = 'none';
-    
-    // Navigate to score match page
-    navigateToPage('score-match');
-}
+  });
 
-function loadMatch(matchId) {
-    currentMatch = matches.find(m => m.id === matchId);
-    if (!currentMatch) return;
-    
-    ballHistory = [];
-    
-    // Show scoring interface
-    document.getElementById('scoringInterface').style.display = 'block';
-    
-    // Update match header
-    document.getElementById('matchTitle').textContent = 
-        `${currentMatch.teamA.name} vs ${currentMatch.teamB.name}`;
-    
-    // Populate player dropdowns
-    populatePlayerDropdowns();
-    
-    // Update display
-    updateScoreDisplay();
-}
+  // === HOME PAGE - Load Live Matches ===
+  async function loadHomePage() {
+    const liveMatchesGrid = document.getElementById("liveMatchesGrid");
+    const tournamentsGrid = document.getElementById("tournamentsGrid");
 
-function populatePlayerDropdowns() {
-    const battingTeam = currentMatch.battingTeam === 'teamA' ? currentMatch.teamA : currentMatch.teamB;
-    const bowlingTeam = currentMatch.battingTeam === 'teamA' ? currentMatch.teamB : currentMatch.teamA;
-    
-    // Batsmen
-    const strikerSelect = document.getElementById('striker');
-    const nonStrikerSelect = document.getElementById('nonStriker');
-    const newBatsmanSelect = document.getElementById('newBatsman');
-    
-    const batsmenOptions = '<option value="">Select Batsman</option>' +
-        battingTeam.players.map(p => `<option value="${p}">${p}</option>`).join('');
-    
-    strikerSelect.innerHTML = batsmenOptions;
-    nonStrikerSelect.innerHTML = batsmenOptions;
-    newBatsmanSelect.innerHTML = batsmenOptions;
-    
-    // Bowler & Fielder
-    const bowlerSelect = document.getElementById('currentBowler');
-    const fielderSelect = document.getElementById('fielder');
-    
-    const bowlerOptions = '<option value="">Select Bowler</option>' +
-        bowlingTeam.players.map(p => `<option value="${p}">${p}</option>`).join('');
-    
-    bowlerSelect.innerHTML = bowlerOptions;
-    fielderSelect.innerHTML = '<option value="">Select Fielder</option>' +
-        bowlingTeam.players.map(p => `<option value="${p}">${p}</option>`).join('');
-}
-
-function updateScoreDisplay() {
-    const battingTeam = currentMatch.battingTeam === 'teamA' ? currentMatch.teamA : currentMatch.teamB;
-    const bowlingTeam = currentMatch.battingTeam === 'teamA' ? currentMatch.teamB : currentMatch.teamA;
-    
-    document.getElementById('battingTeamName').textContent = battingTeam.name;
-    document.getElementById('battingScore').textContent = 
-        `${battingTeam.score}/${battingTeam.wickets}`;
-    document.getElementById('battingOvers').textContent = 
-        `Overs: ${battingTeam.overs.toFixed(1)}/${currentMatch.overs}`;
-    
-    document.getElementById('bowlingTeamName').textContent = bowlingTeam.name;
-    
-    if (currentMatch.innings === 1) {
-        document.getElementById('bowlingScore').textContent = 'Yet to bat';
-        document.getElementById('targetInfo').textContent = '';
-    } else {
-        document.getElementById('bowlingScore').textContent = 
-            `${bowlingTeam.score}/${bowlingTeam.wickets}`;
-        const target = battingTeam.score + 1;
-        const required = target - bowlingTeam.score;
-        document.getElementById('targetInfo').textContent = 
-            `Target: ${target} | Required: ${required}`;
-    }
-}
-
-function updateBatsmanStats() {
-    // Placeholder - In real app, calculate from ball-by-ball data
-    document.getElementById('strikerStats').innerHTML = `
-        <span>0</span><span>0</span><span>0.00</span>
-    `;
-    document.getElementById('nonStrikerStats').innerHTML = `
-        <span>0</span><span>0</span><span>0.00</span>
-    `;
-}
-
-function updateBowlerStats() {
-    // Placeholder - In real app, calculate from ball-by-ball data
-    document.getElementById('bowlerStats').innerHTML = `
-        <span>0.0</span><span>0</span><span>0</span>
-    `;
-}
-
-// Scoring Functions
-function addRuns(runs) {
-    if (!validateSelection()) return;
-    
-    const battingTeam = currentMatch.battingTeam === 'teamA' ? currentMatch.teamA : currentMatch.teamB;
-    battingTeam.score += runs;
-    battingTeam.overs += 0.1;
-    
-    if (battingTeam.overs % 1 === 0.6) {
-        battingTeam.overs = Math.floor(battingTeam.overs) + 1;
-    }
-    
-    ballHistory.push({ type: 'run', runs, overs: battingTeam.overs });
-    
-    updateScoreDisplay();
-    showToast(`${runs} run${runs !== 1 ? 's' : ''} added`, 'success');
-    
-    checkInningsEnd();
-}
-
-function addExtra(type) {
-    if (!validateSelection()) return;
-    
-    const battingTeam = currentMatch.battingTeam === 'teamA' ? currentMatch.teamA : currentMatch.teamB;
-    
-    if (type === 'wide') {
-        battingTeam.score += 1;
-        showToast('Wide ball - 1 run added', 'info');
-    } else if (type === 'noball') {
-        battingTeam.score += 1;
-        showToast('No ball - 1 run added', 'info');
-    }
-    
-    ballHistory.push({ type, overs: battingTeam.overs });
-    updateScoreDisplay();
-}
-
-function showWicketModal() {
-    if (!validateSelection()) return;
-    
-    const modal = document.getElementById('wicketModal');
-    modal.classList.add('active');
-}
-
-function closeWicketModal() {
-    document.getElementById('wicketModal').classList.remove('active');
-    document.getElementById('wicketType').value = '';
-    document.getElementById('newBatsman').value = '';
-    document.getElementById('fielderGroup').style.display = 'none';
-}
-
-function confirmWicket() {
-    const wicketType = document.getElementById('wicketType').value;
-    const newBatsman = document.getElementById('newBatsman').value;
-    
-    if (!wicketType || !newBatsman) {
-        showToast('Please fill all wicket details', 'error');
-        return;
-    }
-    
-    const battingTeam = currentMatch.battingTeam === 'teamA' ? currentMatch.teamA : currentMatch.teamB;
-    battingTeam.wickets += 1;
-    battingTeam.overs += 0.1;
-    
-    if (battingTeam.overs % 1 === 0.6) {
-        battingTeam.overs = Math.floor(battingTeam.overs) + 1;
-    }
-    
-    ballHistory.push({ type: 'wicket', wicketType, overs: battingTeam.overs });
-    
-    closeWicketModal();
-    updateScoreDisplay();
-    showToast(`Wicket! ${wicketType}`, 'info');
-    
-    checkInningsEnd();
-}
-
-function undoLastBall() {
-    if (ballHistory.length === 0) {
-        showToast('No balls to undo', 'error');
-        return;
-    }
-    
-    const lastBall = ballHistory.pop();
-    const battingTeam = currentMatch.battingTeam === 'teamA' ? currentMatch.teamA : currentMatch.teamB;
-    
-    if (lastBall.type === 'run') {
-        battingTeam.score -= lastBall.runs;
-        battingTeam.overs -= 0.1;
-    } else if (lastBall.type === 'wicket') {
-        battingTeam.wickets -= 1;
-        battingTeam.overs -= 0.1;
-    } else if (lastBall.type === 'wide' || lastBall.type === 'noball') {
-        battingTeam.score -= 1;
-    }
-    
-    if (battingTeam.overs < 0) battingTeam.overs = 0;
-    
-    updateScoreDisplay();
-    showToast('Last ball undone', 'info');
-}
-
-function endInnings() {
-    if (!currentMatch) return;
-    
-    if (currentMatch.innings === 1) {
-        currentMatch.innings = 2;
-        currentMatch.battingTeam = currentMatch.battingTeam === 'teamA' ? 'teamB' : 'teamA';
-        ballHistory = [];
-        
-        populatePlayerDropdowns();
-        updateScoreDisplay();
-        showToast('Innings ended. Second innings begins!', 'success');
-    } else {
-        endMatch();
-    }
-}
-
-function endMatch() {
-    if (!currentMatch) return;
-    
-    const teamA = currentMatch.teamA;
-    const teamB = currentMatch.teamB;
-    
-    let result = '';
-    if (teamA.score > teamB.score) {
-        result = `${teamA.name} won by ${teamA.score - teamB.score} runs`;
-    } else if (teamB.score > teamA.score) {
-        result = `${teamB.name} won by ${10 - teamB.wickets} wickets`;
-    } else {
-        result = 'Match Tied!';
-    }
-    
-    currentMatch.isLive = false;
-    currentMatch.status = 'completed';
-    
-    showResultModal(result);
-    renderLiveMatches();
-}
-
-function checkInningsEnd() {
-    const battingTeam = currentMatch.battingTeam === 'teamA' ? currentMatch.teamA : currentMatch.teamB;
-    
-    if (battingTeam.wickets >= 10 || battingTeam.overs >= currentMatch.overs) {
-        setTimeout(() => {
-            if (currentMatch.innings === 1) {
-                endInnings();
-            } else {
-                endMatch();
-            }
-        }, 1000);
-    }
-}
-
-function validateSelection() {
-    const striker = document.getElementById('striker').value;
-    const nonStriker = document.getElementById('nonStriker').value;
-    const bowler = document.getElementById('currentBowler').value;
-    
-    if (!striker || !nonStriker || !bowler) {
-        showToast('Please select batsmen and bowler', 'error');
-        return false;
-    }
-    
-    if (striker === nonStriker) {
-        showToast('Striker and non-striker cannot be same', 'error');
-        return false;
-    }
-    
-    return true;
-}
-
-// Tournament Functions
-function showCreateTournamentModal() {
-    document.getElementById('tournamentModal').classList.add('active');
-}
-
-function closeTournamentModal() {
-    document.getElementById('tournamentModal').classList.remove('active');
-    document.getElementById('tournamentForm').reset();
-}
-
-function createTournament() {
-    const tournament = {
-        id: tournaments.length + 1,
-        name: document.getElementById('tournamentName').value,
-        format: document.getElementById('tournamentFormat').value,
-        matchType: document.getElementById('tournamentMatchType').value,
-        startDate: document.getElementById('tournamentStartDate').value,
-        endDate: document.getElementById('tournamentEndDate').value,
-        teams: parseInt(document.getElementById('tournamentTeams').value),
-        prize: document.getElementById('tournamentPrize').value,
-        status: 'upcoming',
-        matches: 0
-    };
-    
-    tournaments.push(tournament);
-    closeTournamentModal();
-    renderTournamentsList();
-    populateTournamentSelect();
-    showToast('Tournament created successfully!', 'success');
-}
-
-// Turf Booking
-function bookTurf(turfId) {
-    const turf = sampleTurfs.find(t => t.id === turfId);
-    if (!turf) return;
-    
-    document.getElementById('bookingTurfName').textContent = `🏟️ ${turf.name}`;
-    document.getElementById('bookingDate').textContent = `📅 ${new Date().toLocaleDateString()}`;
-    document.getElementById('bookingAmount').textContent = turf.price;
-    
-    document.getElementById('bookingModal').classList.add('active');
-    showToast('Booking confirmed!', 'success');
-}
-
-function closeBookingModal() {
-    document.getElementById('bookingModal').classList.remove('active');
-}
-
-// Result Modal
-function showResultModal(result) {
-    const modal = document.getElementById('resultModal');
-    document.getElementById('resultTitle').textContent = '🏆 Match Result';
-    document.getElementById('resultDetails').innerHTML = `
-        <div style="text-align: center; padding: 2rem;">
-            <h2 style="color: var(--primary); margin-bottom: 1rem;">${result}</h2>
-            <div style="font-size: 1.2rem; color: #64748b;">
-                <p>${currentMatch.teamA.name}: ${currentMatch.teamA.score}/${currentMatch.teamA.wickets} (${currentMatch.teamA.overs})</p>
-                <p>${currentMatch.teamB.name}: ${currentMatch.teamB.score}/${currentMatch.teamB.wickets} (${currentMatch.teamB.overs})</p>
+    // Load live matches
+    try {
+      const res = await fetch(`${API_BASE}/matches/live`);
+      const data = await res.json();
+      
+      if (res.ok && data.matches && data.matches.length > 0) {
+        liveMatchesGrid.innerHTML = "";
+        data.matches.forEach(match => {
+          const card = document.createElement("div");
+          card.className = "match-card live";
+          card.innerHTML = `
+            <div class="match-header">
+              <span class="live-badge">🔴 LIVE</span>
+              <h3>${escapeHtml(match.matchName)}</h3>
             </div>
+            <div class="match-score">
+              <div class="team">
+                <span class="team-name">${escapeHtml(match.teamA.name)}</span>
+                <span class="score">${match.teamA.score}/${match.teamA.wickets} (${match.teamA.overs})</span>
+              </div>
+              <div class="vs">vs</div>
+              <div class="team">
+                <span class="team-name">${escapeHtml(match.teamB.name)}</span>
+                <span class="score">${match.teamB.score}/${match.teamB.wickets} (${match.teamB.overs})</span>
+              </div>
+            </div>
+            <div class="match-footer">
+              <span>📍 ${escapeHtml(match.venue)}</span>
+            </div>
+          `;
+          liveMatchesGrid.appendChild(card);
+        });
+      } else {
+        liveMatchesGrid.innerHTML = '<p style="text-align:center;">No live matches at the moment.</p>';
+      }
+    } catch (err) {
+      console.error("Error loading live matches:", err);
+      liveMatchesGrid.innerHTML = '<p style="text-align:center;">Failed to load matches.</p>';
+    }
+
+    // Load ongoing tournaments
+    try {
+      const res = await fetch(`${API_BASE}/tournaments`);
+      const data = await res.json();
+      
+      if (res.ok && data.tournaments) {
+        const ongoing = data.tournaments.filter(t => t.status === "ongoing" || t.status === "upcoming");
+        
+        if (ongoing.length > 0) {
+          tournamentsGrid.innerHTML = "";
+          ongoing.slice(0, 3).forEach(tournament => {
+            const card = document.createElement("div");
+            card.className = "tournament-card";
+            card.innerHTML = `
+              <h3>🏆 ${escapeHtml(tournament.name)}</h3>
+              <p>📍 ${escapeHtml(tournament.venue)}</p>
+              <p>📅 ${new Date(tournament.startDate).toLocaleDateString()}</p>
+              <p>👥 ${tournament.registeredTeams.length}/${tournament.maxTeams} teams</p>
+              <span class="status-badge ${tournament.status}">${tournament.status.toUpperCase()}</span>
+            `;
+            tournamentsGrid.appendChild(card);
+          });
+        } else {
+          tournamentsGrid.innerHTML = '<p style="text-align:center;">Stay tuned for tournaments!</p>';
+        }
+      }
+    } catch (err) {
+      console.error("Error loading tournaments:", err);
+    }
+  }
+
+  // === TOURNAMENTS PAGE ===
+  async function loadTournaments() {
+    const tournamentsContainer = document.getElementById("tournaments").querySelector(".container");
+    
+    tournamentsContainer.innerHTML = `
+      <h2 class="section-title">🏆 Tournaments</h2>
+      <div style="text-align:center; margin-bottom:20px;">
+        <button id="createTournamentBtn" class="submit-btn" style="max-width:300px;">Create New Tournament</button>
+      </div>
+      <div id="tournamentsList"></div>
+      <div id="createTournamentForm" style="display:none;"></div>
+    `;
+
+    const createTournamentBtn = document.getElementById("createTournamentBtn");
+    const tournamentsList = document.getElementById("tournamentsList");
+    const createTournamentFormContainer = document.getElementById("createTournamentForm");
+
+    // Show create tournament form
+    createTournamentBtn?.addEventListener("click", () => {
+      if (!isLoggedIn()) {
+        showToast("Please login to create a tournament", "error");
+        showPage("login");
+        return;
+      }
+
+      createTournamentFormContainer.style.display = "block";
+      createTournamentFormContainer.innerHTML = `
+        <div class="form-card">
+          <h2 class="form-title">Create Tournament</h2>
+          <form id="newTournamentForm">
+            <div class="form-group">
+              <label>Tournament Name</label>
+              <input type="text" id="tournamentName" required />
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="tournamentDesc" rows="3"></textarea>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Start Date</label>
+                <input type="date" id="tournamentStartDate" required />
+              </div>
+              <div class="form-group">
+                <label>End Date</label>
+                <input type="date" id="tournamentEndDate" required />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Venue</label>
+                <input type="text" id="tournamentVenue" required />
+              </div>
+              <div class="form-group">
+                <label>Format</label>
+                <select id="tournamentFormat">
+                  <option value="T20">T20</option>
+                  <option value="ODI">ODI</option>
+                  <option value="Test">Test</option>
+                  <option value="Custom">Custom</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Max Teams</label>
+                <input type="number" id="tournamentMaxTeams" value="8" min="2" max="32" />
+              </div>
+              <div class="form-group">
+                <label>Prize Pool</label>
+                <input type="text" id="tournamentPrize" placeholder="e.g., ₹50,000" />
+              </div>
+            </div>
+            <button type="submit" class="submit-btn">Create Tournament</button>
+            <button type="button" id="cancelTournamentBtn" class="btn-logout" style="width:100%; margin-top:10px;">Cancel</button>
+          </form>
         </div>
-    `;
-    modal.classList.add('active');
-}
+      `;
 
-function closeResultModal() {
-    document.getElementById('resultModal').classList.remove('active');
-}
+      document.getElementById("cancelTournamentBtn")?.addEventListener("click", () => {
+        createTournamentFormContainer.style.display = "none";
+      });
 
-// Toast Notifications
-function showToast(message, type = 'info') {
-    const container = document.getElementById('toastContainer');
-    const toast = document.createElement('div');
+      document.getElementById("newTournamentForm")?.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const tournamentData = {
+          name: document.getElementById("tournamentName").value.trim(),
+          description: document.getElementById("tournamentDesc").value.trim(),
+          startDate: document.getElementById("tournamentStartDate").value,
+          endDate: document.getElementById("tournamentEndDate").value,
+          venue: document.getElementById("tournamentVenue").value.trim(),
+          format: document.getElementById("tournamentFormat").value,
+          maxTeams: parseInt(document.getElementById("tournamentMaxTeams").value),
+          prizePool: document.getElementById("tournamentPrize").value.trim() || "TBD"
+        };
+
+        try {
+          const token = localStorage.getItem("token");
+          const res = await fetch(`${API_BASE}/tournaments`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "Authorization": `Bearer ${token}`
+            },
+            body: JSON.stringify(tournamentData)
+          });
+
+          const data = await res.json();
+
+          if (res.ok) {
+            showToast("Tournament created successfully! 🏆", "success");
+            createTournamentFormContainer.style.display = "none";
+            loadTournaments();
+          } else {
+            showToast(data.message || "Failed to create tournament", "error");
+          }
+        } catch (err) {
+          console.error("Tournament creation error:", err);
+          showToast("Server error", "error");
+        }
+      });
+    });
+
+    // Load all tournaments
+    try {
+      const res = await fetch(`${API_BASE}/tournaments`);
+      const data = await res.json();
+      
+      if (res.ok && data.tournaments && data.tournaments.length > 0) {
+        tournamentsList.innerHTML = '<div class="tournaments-grid"></div>';
+        const grid = tournamentsList.querySelector(".tournaments-grid");
+        
+        data.tournaments.forEach(tournament => {
+          const card = document.createElement("div");
+          card.className = "tournament-card-detailed";
+          card.innerHTML = `
+            <div class="tournament-header">
+              <h3>🏆 ${escapeHtml(tournament.name)}</h3>
+              <span class="status-badge ${tournament.status}">${tournament.status}</span>
+            </div>
+            <p class="tournament-desc">${escapeHtml(tournament.description || "No description")}</p>
+            <div class="tournament-info">
+              <p>📍 <strong>Venue:</strong> ${escapeHtml(tournament.venue)}</p>
+              <p>📅 <strong>Dates:</strong> ${new Date(tournament.startDate).toLocaleDateString()} - ${new Date(tournament.endDate).toLocaleDateString()}</p>
+              <p>🎯 <strong>Format:</strong> ${tournament.format}</p>
+              <p>👥 <strong>Teams:</strong> ${tournament.registeredTeams.length}/${tournament.maxTeams}</p>
+              <p>💰 <strong>Prize:</strong> ${escapeHtml(tournament.prizePool)}</p>
+            </div>
+            <button class="register-btn" data-id="${tournament._id}" ${tournament.registeredTeams.length >= tournament.maxTeams ? 'disabled' : ''}>
+              ${tournament.registeredTeams.length >= tournament.maxTeams ? 'Tournament Full' : 'Register Team'}
+            </button>
+          `;
+          grid.appendChild(card);
+        });
+
+        // Attach register buttons
+        document.querySelectorAll(".register-btn").forEach(btn => {
+          btn.addEventListener("click", () => registerTeamInTournament(btn.getAttribute("data-id")));
+        });
+      } else {
+        tournamentsList.innerHTML = '<p style="text-align:center;">No tournaments available yet.</p>';
+      }
+    } catch (err) {
+      console.error("Error loading tournaments:", err);
+      tournamentsList.innerHTML = '<p style="text-align:center;">Failed to load tournaments.</p>';
+    }
+  }
+
+  // Register team in tournament
+  async function registerTeamInTournament(tournamentId) {
+    if (!isLoggedIn()) {
+      showToast("Please login to register", "error");
+      showPage("login");
+      return;
+    }
+
+    const teamName = prompt("Enter your team name:");
+    const captain = prompt("Enter captain name:");
+    const playersStr = prompt("Enter player names (comma-separated):");
+
+    if (!teamName || !captain || !playersStr) {
+      showToast("Registration cancelled", "info");
+      return;
+    }
+
+    const players = playersStr.split(',').map(p => p.trim()).filter(p => p);
+
+    try {
+      const token = localStorage.getItem("token");
+      const res = await fetch(`${API_BASE}/tournaments/${tournamentId}/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: JSON.stringify({ teamName, captain, players })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast("Team registered successfully! 🎉", "success");
+        loadTournaments();
+      } else {
+        showToast(data.message || "Registration failed", "error");
+      }
+    } catch (err) {
+      console.error("Team registration error:", err);
+      showToast("Server error", "error");
+    }
+  }
+
+  // === MY STATS PAGE ===
+  async function loadUserProfile() {
+    const profileSection = document.getElementById("profile-section");
+    const token = localStorage.getItem("token");
+
+    if (!token) {
+      profileSection.innerHTML = `
+        <h2 class="section-title">📈 My Stats</h2>
+        <div class="profile-card"><p>Please login to view your stats.</p></div>
+      `;
+      return;
+    }
+
+    try {
+      // Fetch user profile
+      const userRes = await fetch(`${API_BASE}/users/profile`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (!userRes.ok) throw new Error("Failed to fetch profile");
+      
+      const user = await userRes.json();
+      localStorage.setItem("user", JSON.stringify(user.user || user));
+      setUserFromStorage();
+
+      // Fetch user's matches
+      const matchesRes = await fetch(`${API_BASE}/matches/user/my-matches`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      let matches = [];
+      if (matchesRes.ok) {
+        const matchData = await matchesRes.json();
+        matches = matchData.matches || [];
+      }
+
+      // Fetch user's bookings
+      const bookingsRes = await fetch(`${API_BASE}/bookings/mybookings`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      let bookings = [];
+      if (bookingsRes.ok) {
+        const bookingData = await bookingsRes.json();
+        bookings = bookingData.bookings || [];
+      }
+
+      const userData = user.user || user;
+
+      profileSection.innerHTML = `
+        <h2 class="section-title">📈 My Stats</h2>
+        <div class="profile-card">
+          <h3 style="margin-bottom:15px;">👤 ${escapeHtml(userData.name || "User")}</h3>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <p><strong>Email:</strong> ${escapeHtml(userData.email || "-")}</p>
+              <p><strong>Phone:</strong> ${escapeHtml(userData.phone || "-")}</p>
+              <p><strong>Role:</strong> ${escapeHtml(userData.role || "user")}</p>
+              <p><strong>Joined:</strong> ${userData.createdAt ? new Date(userData.createdAt).toDateString() : "-"}</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-section">
+          <h3 style="margin:20px 0 10px;">🏏 My Matches (${matches.length})</h3>
+          <div class="matches-list">
+            ${matches.length > 0 ? matches.map(m => `
+              <div class="match-item">
+                <h4>${escapeHtml(m.matchName)}</h4>
+                <p>${escapeHtml(m.teamA.name)} vs ${escapeHtml(m.teamB.name)}</p>
+                <p>📍 ${escapeHtml(m.venue)} | 📅 ${new Date(m.matchDate).toLocaleDateString()}</p>
+                <span class="status-badge ${m.status}">${m.status}</span>
+              </div>
+            `).join('') : '<p>No matches hosted yet.</p>'}
+          </div>
+        </div>
+
+        <div class="stats-section">
+          <h3 style="margin:20px 0 10px;">🌿 My Bookings (${bookings.length})</h3>
+          <div class="bookings-list">
+            ${bookings.length > 0 ? bookings.map(b => `
+              <div class="booking-item">
+                <h4>${escapeHtml(b.turf?.name || "Turf")}</h4>
+                <p>📍 ${escapeHtml(b.turf?.location || "-")}</p>
+                <p>📅 ${b.date} | ⏰ ${b.startTime} - ${b.endTime}</p>
+                <p>💰 ₹${b.totalPrice}</p>
+                <span class="status-badge ${b.status}">${b.status}</span>
+              </div>
+            `).join('') : '<p>No bookings yet.</p>'}
+          </div>
+        </div>
+
+        <div style="margin-top:20px; text-align:center;">
+          <button id="profileLogoutBtn" class="submit-btn" style="max-width:200px;">Logout</button>
+        </div>
+      `;
+
+      document.getElementById("profileLogoutBtn")?.addEventListener("click", () => {
+        localStorage.removeItem("token");
+        localStorage.removeItem("user");
+        setUserFromStorage();
+        showToast("Logged out", "info");
+        showPage("home");
+      });
+
+    } catch (err) {
+      console.error("Profile load error:", err);
+      profileSection.innerHTML = `
+        <h2 class="section-title">📈 My Stats</h2>
+        <div class="profile-card"><p>Could not load profile. Please try again later.</p></div>
+      `;
+    }
+  }
+
+  // === BOOK TURF ===
+  async function loadTurfs() {
+    const turfListEl = document.getElementById("turfList");
+    if (!turfListEl) return;
+
+    turfListEl.innerHTML = `<p>Loading turfs...</p>`;
+
+    try {
+      const res = await fetch(`${API_BASE}/turfs`);
+      const data = await res.json();
+
+      if (!res.ok) throw new Error("Failed to load turfs");
+
+      if (!Array.isArray(data) || data.length === 0) {
+        turfListEl.innerHTML = `<p>No turfs available.</p>`;
+        return;
+      }
+
+      turfListEl.innerHTML = "";
+      data.forEach(turf => {
+        const card = document.createElement("div");
+        card.className = "turf-card";
+        card.innerHTML = `
+          <div class="turf-info">
+            <h3 class="turf-name">${escapeHtml(turf.name || "Turf")}</h3>
+            <p class="turf-location">📍 ${escapeHtml(turf.location || "Unknown")}</p>
+            <p class="turf-price">💰 ₹${turf.pricePerHour || "0"}/hr</p>
+          </div>
+          <div>
+            <button class="book-btn" data-id="${turf._id || ""}" data-name="${escapeHtml(turf.name || "")}">Book</button>
+          </div>
+        `;
+        turfListEl.appendChild(card);
+      });
+
+      turfListEl.querySelectorAll(".book-btn").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const turfId = btn.getAttribute("data-id");
+          const turfName = btn.getAttribute("data-name");
+          bookTurf(turfId, turfName);
+        });
+      });
+    } catch (err) {
+      console.error("Load turfs error:", err);
+      turfListEl.innerHTML = `<p>Failed to load turfs.</p>`;
+    }
+  }
+
+  async function bookTurf(turfId, turfName) {
+    const date = prompt(`Enter booking date for ${turfName} (YYYY-MM-DD):`);
+    const startTime = prompt("Start time (e.g. 18:00):");
+    const endTime = prompt("End time (e.g. 19:00):");
+
+    if (!date || !startTime || !endTime) {
+      showToast("Booking cancelled", "info");
+      return;
+    }
+
+    const token = localStorage.getItem("token");
+    if (!token) {
+      showToast("Please login to book", "error");
+      showPage("login");
+      return;
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/bookings`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({ turfId, date, startTime, endTime })
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast("Booking successful", "success");
+      } else {
+        showToast(data.message || "Booking failed", "error");
+      }
+    } catch (err) {
+      console.error("Booking error:", err);
+      showToast("Server error while booking", "error");
+    }
+  }
+
+  // === HELPERS ===
+  function escapeHtml(str = "") {
+    return String(str)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  function showToast(message = "", type = "info") {
+    const container = document.getElementById("toastContainer");
+    if (!container) return alert(message);
+    
+    const toast = document.createElement("div");
     toast.className = `toast ${type}`;
-    
-    const icons = {
-        success: '✅',
-        error: '❌',
-        info: 'ℹ️'
-    };
-    
-    toast.innerHTML = `
-        <span class="toast-icon">${icons[type]}</span>
-        <span class="toast-message">${message}</span>
-    `;
-    
+    toast.innerText = message;
     container.appendChild(toast);
-    
-    setTimeout(() => {
-        toast.style.animation = 'fadeOut 0.3s ease';
-        setTimeout(() => toast.remove(), 300);
-    }, 3000);
-}
+    setTimeout(() => toast.remove(), 3500);
+  }
+});

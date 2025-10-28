@@ -1,46 +1,59 @@
-import express from "express";
-import mongoose from "mongoose";
-import dotenv from "dotenv";
-import cors from "cors";
-import path from "path";
-import { fileURLToPath } from "url";
+// ===============================
+// 🌐 CricZone Backend Server
+// ===============================
+
+const express = require("express");
+const mongoose = require("mongoose");
+const dotenv = require("dotenv");
+const cors = require("cors");
+const path = require("path");
+
+// ✅ Load environment variables
+dotenv.config();
+
+// ✅ Connect to MongoDB
 const connectDB = require("./config/db");
 connectDB();
 
-
-// Fix __dirname in ES modules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-// ✅ Load .env from parent folder
-dotenv.config({ path: path.resolve(__dirname, "../.env") });
-
+// ✅ Initialize app
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Middleware
+// ===============================
+// ⚙️ Middleware
+// ===============================
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// ✅ Connect to MongoDB
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log("✅ MongoDB connected"))
-  .catch((err) => console.log("❌ MongoDB error:", err));
+// ===============================
+// 🛣️ API Routes
+// ===============================
+const userRoutes = require("./routes/userRoutes");
+const turfRoutes = require("./routes/turfRoutes");
+const bookingRoutes = require("./routes/bookingRoutes");
+const matchRoutes = require("./routes/matchRoutes");
+const tournamentRoutes = require("./routes/tournamentRoutes");
 
-// ✅ Serve frontend files
+// Use routes
+app.use("/api/users", userRoutes);
+app.use("/api/turfs", turfRoutes);
+app.use("/api/bookings", bookingRoutes);
+app.use("/api/matches", matchRoutes);
+app.use("/api/tournaments", tournamentRoutes);
+
+// ===============================
+// 🏠 Serve Frontend Files
+// ===============================
 app.use(express.static(path.join(__dirname, "../frontend")));
 
-app.get("/", (req, res) => {
+app.get(/.*/, (req, res) => {
   res.sendFile(path.join(__dirname, "../frontend/index.html"));
 });
 
-// ✅ Example API route
-app.get("/api/hello", (req, res) => {
-  res.json({ message: "Hello from backend!" });
-});
-
-// ✅ Start the server
+// ===============================
+// 🚀 Start Server
+// ===============================
 app.listen(PORT, () =>
   console.log(`🚀 Server running on http://localhost:${PORT}`)
 );
