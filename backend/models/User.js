@@ -28,6 +28,39 @@ const userSchema = new mongoose.Schema({
     enum: ["admin", "user"],
     default: "user",
   },
+  // ✅ BUG #4 FIX: Add player statistics
+  stats: {
+    matchesPlayed: {
+      type: Number,
+      default: 0
+    },
+    runsScored: {
+      type: Number,
+      default: 0
+    },
+    ballsFaced: {
+      type: Number,
+      default: 0
+    },
+    wicketsTaken: {
+      type: Number,
+      default: 0
+    },
+    ballsBowled: {
+      type: Number,
+      default: 0
+    },
+    catches: {
+      type: Number,
+      default: 0
+    },
+    runOuts: {
+      type: Number,
+      default: 0
+    }
+  }
+}, {
+  timestamps: true
 });
 
 // 🔒 Hash password before saving

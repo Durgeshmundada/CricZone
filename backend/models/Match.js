@@ -1,34 +1,41 @@
 // backend/models/Match.js
-const mongoose = require("mongoose");
+const mongoose = require('mongoose');
 
 const matchSchema = new mongoose.Schema({
   matchName: {
     type: String,
-    required: true,
-    trim: true
+    required: true
   },
   matchType: {
     type: String,
-    enum: ["T20", "ODI", "Test", "Custom"],
-    required: true
+    required: true,
+    enum: ['T20', 'ODI', 'Test', 'Custom']
   },
-  overs: {
+  totalOvers: {
     type: Number,
     default: 20
   },
+  ballsPerOver: {
+    type: Number,
+    default: 6
+  },
   teamA: {
     name: { type: String, required: true },
-    players: [{ type: String }],
+    teamId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team' }, // ✅ BUG #3 FIX
+    players: [String],
     score: { type: Number, default: 0 },
     wickets: { type: Number, default: 0 },
-    overs: { type: Number, default: 0 }
+    overs: { type: String, default: "0" },
+    ballsPlayed: { type: Number, default: 0 } // ✅ Track total balls
   },
   teamB: {
     name: { type: String, required: true },
-    players: [{ type: String }],
+    teamId: { type: mongoose.Schema.Types.ObjectId, ref: 'Team' }, // ✅ BUG #3 FIX
+    players: [String],
     score: { type: Number, default: 0 },
     wickets: { type: Number, default: 0 },
-    overs: { type: Number, default: 0 }
+    overs: { type: String, default: "0" },
+    ballsPlayed: { type: Number, default: 0 } // ✅ Track total balls
   },
   venue: {
     type: String,
@@ -38,44 +45,70 @@ const matchSchema = new mongoose.Schema({
     type: Date,
     required: true
   },
-  tournament: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "Tournament",
-    default: null
-  },
   status: {
     type: String,
-    enum: ["scheduled", "live", "completed", "cancelled"],
-    default: "scheduled"
-  },
-  tossWinner: {
-    type: String,
-    default: null
-  },
-  tossDecision: {
-    type: String,
-    enum: ["bat", "bowl", null],
-    default: null
+    enum: ['scheduled', 'upcoming', 'live', 'innings_break', 'completed'],
+    default: 'scheduled'
   },
   winner: {
     type: String,
     default: null
   },
-  result: {
+  createdBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User',
+    required: true
+  },
+  tournament: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Tournament'
+  },
+  currentInning: {
+    type: Number,
+    default: 1
+  },
+  currentBatsman: {
     type: String,
     default: null
   },
-  createdBy: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User",
-    required: true
+  currentBowler: {
+    type: String,
+    default: null
   },
-  scorers: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: "User"
-  }]
+  // ✅ BUG #1, #5, #10 FIX: Enhanced inning tracking
+  innings: {
+    first: {
+      battingTeam: String,
+      score: { type: Number, default: 0 },
+      wickets: { type: Number, default: 0 },
+      overs: { type: Number, default: 0 },
+      balls: { type: Number, default: 0 },
+      isCompleted: { type: Boolean, default: false },
+      extras: {
+        wides: { type: Number, default: 0 },
+        noBalls: { type: Number, default: 0 },
+        byes: { type: Number, default: 0 },
+        legByes: { type: Number, default: 0 }
+      }
+    },
+    second: {
+      battingTeam: String,
+      score: { type: Number, default: 0 },
+      wickets: { type: Number, default: 0 },
+      overs: { type: Number, default: 0 },
+      balls: { type: Number, default: 0 },
+      isCompleted: { type: Boolean, default: false },
+      target: { type: Number, default: 0 },
+      extras: {
+        wides: { type: Number, default: 0 },
+        noBalls: { type: Number, default: 0 },
+        byes: { type: Number, default: 0 },
+        legByes: { type: Number, default: 0 }
+      }
+    }
+  }
 }, {
   timestamps: true
 });
 
-module.exports = mongoose.model("Match", matchSchema);
+module.exports = mongoose.model('Match', matchSchema);

@@ -34,26 +34,29 @@ const turfRoutes = require("./routes/turfRoutes");
 const bookingRoutes = require("./routes/bookingRoutes");
 const matchRoutes = require("./routes/matchRoutes");
 const tournamentRoutes = require("./routes/tournamentRoutes");
+const teamRoutes = require("./routes/teamRoutes"); // ✅ NEW: Team routes
 
-// Use routes
 app.use("/api/users", userRoutes);
 app.use("/api/turfs", turfRoutes);
 app.use("/api/bookings", bookingRoutes);
 app.use("/api/matches", matchRoutes);
 app.use("/api/tournaments", tournamentRoutes);
+app.use("/api/teams", teamRoutes); // ✅ NEW: Team routes
 
 // ===============================
-// 🏠 Serve Frontend Files
+// 🏠 Serve Frontend (Production)
 // ===============================
-app.use(express.static(path.join(__dirname, "../frontend")));
+if (process.env.NODE_ENV === "production") {
+  app.use(express.static(path.join(__dirname, "../frontend")));
 
-app.get(/.*/, (req, res) => {
-  res.sendFile(path.join(__dirname, "../frontend/index.html"));
-});
+  app.get("*", (req, res) => {
+    res.sendFile(path.join(__dirname, "../frontend", "index.html"));
+  });
+}
 
 // ===============================
 // 🚀 Start Server
 // ===============================
-app.listen(PORT, () =>
-  console.log(`🚀 Server running on http://localhost:${PORT}`)
-);
+app.listen(PORT, () => {
+  console.log(`✅ Server running on http://localhost:${PORT}`);
+});
