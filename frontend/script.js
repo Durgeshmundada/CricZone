@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const navLoginLink = document.getElementById("navLogin");
   const logoutBtn = document.getElementById("logoutBtn");
 
-  // === PAGE NAVIGATION ===
   function showPage(pageId) {
     pages.forEach(p => p.style.display = p.id === pageId ? "block" : "none");
     navLinks.forEach(l => l.classList.toggle("active", l.getAttribute("data-page") === pageId));
