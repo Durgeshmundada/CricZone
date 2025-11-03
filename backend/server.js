@@ -1,62 +1,41 @@
-// ===============================
-// 🌐 CricZone Backend Server
-// ===============================
+const express = require('express');
+const dotenv = require('dotenv');
+const cors = require('cors');
+const connectDB = require('./config/db');
+const User = require('./models/User'); // <--- 1. FIXED PATH AND FILENAME
 
-const express = require("express");
-const mongoose = require("mongoose");
-const dotenv = require("dotenv");
-const cors = require("cors");
-const path = require("path");
-
-// ✅ Load environment variables
+// Load .env variables
 dotenv.config();
 
-// ✅ Connect to MongoDB
-const connectDB = require("./config/db");
+// Connect to MongoDB
 connectDB();
 
-// ✅ Initialize app
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// ===============================
-// ⚙️ Middleware
-// ===============================
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// --- MIDDLEWARE ---
+app.use(cors()); 
+app.use(express.json()); // This line should already be here
 
-// ===============================
-// 🛣️ API Routes
-// ===============================
-const userRoutes = require("./routes/userRoutes");
-const turfRoutes = require("./routes/turfRoutes");
-const bookingRoutes = require("./routes/bookingRoutes");
-const matchRoutes = require("./routes/matchRoutes");
-const tournamentRoutes = require("./routes/tournamentRoutes");
-const teamRoutes = require("./routes/teamRoutes"); // ✅ NEW: Team routes
+// --- ROUTES ---
+app.get('/', (req, res) => {
+  res.send('API is running...');
+});
 
-app.use("/api/users", userRoutes);
-app.use("/api/turfs", turfRoutes);
-app.use("/api/bookings", bookingRoutes);
-app.use("/api/matches", matchRoutes);
-app.use("/api/tournaments", tournamentRoutes);
-app.use("/api/teams", teamRoutes); // ✅ NEW: Team routes
+// 2. REMOVED THE HARDCODED REGISTER ROUTE.
+// We will use the router file instead.
 
-// ===============================
-// 🏠 Serve Frontend (Production)
-// ===============================
-if (process.env.NODE_ENV === "production") {
-  app.use(express.static(path.join(__dirname, "../frontend")));
+// 3. ADD YOUR ROUTER FILES SO THAT LOGIN AND REGISTER BOTH WORK
+// These lines will find your backend/routes/userRoutes.js file.
+app.use('/api/users', require('./routes/userRoutes')); 
+app.use('/api/matches', require('./routes/matchRoutes'));
+app.use('/api/bookings', require('./routes/bookingRoutes'));
+app.use('/api/turfs', require('./routes/turfRoutes'));
+app.use('/api/tournaments', require('./routes/tournamentRoutes'));
+// Add other routes as needed...
 
-  app.get("*", (req, res) => {
-    res.sendFile(path.join(__dirname, "../frontend", "index.html"));
-  });
-}
 
-// ===============================
-// 🚀 Start Server
-// ===============================
+// --- START SERVER ---
 app.listen(PORT, () => {
-  console.log(`✅ Server running on http://localhost:${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
