@@ -1,5 +1,6 @@
-const Booking = require("../models/Booking");
-const Turf = require("../models/Turf");
+const asyncHandler = require('express-async-handler');
+const Booking = require('../models/Booking');
+const Turf = require('../models/Turf');
 
 const normalizeTimeToMinutes = (time) => {
   const value = String(time || "").trim();
@@ -121,7 +122,6 @@ exports.createBooking = async (req, res) => {
       error: process.env.NODE_ENV === "production" ? undefined : error.message
     });
   }
-};
 
 exports.getAllBookings = async (_req, res) => {
   try {
@@ -142,7 +142,6 @@ exports.getAllBookings = async (_req, res) => {
       message: "Failed to fetch bookings"
     });
   }
-};
 
 exports.getUserBookings = async (req, res) => {
   try {
@@ -208,6 +207,19 @@ exports.cancelBooking = async (req, res) => {
       message: "Failed to cancel booking"
     });
   }
+
+  booking.status = 'Cancelled';
+  await booking.save();
+
+  res.status(200).json({ message: 'Booking cancelled' });
+});
+
+module.exports = {
+  createBooking,
+  getMyBookings,
+  getAllBookings,
+  getUserBookings,
+  cancelBooking,
 };
 
 module.exports = exports;

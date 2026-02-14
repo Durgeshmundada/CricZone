@@ -17,6 +17,12 @@ const {
 const { protect } = require("../middleware/authMiddleware");
 
 const router = express.Router();
+const { 
+  registerUser, 
+  loginUser, 
+  getUserProfile 
+} = require("../controllers/userController");
+const { protect } = require('../middleware/authMiddleware');
 
 // ========== AUTHENTICATION ROUTES ==========
 router.post("/register", registerUser);

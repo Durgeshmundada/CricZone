@@ -1,5 +1,6 @@
-const jwt = require("jsonwebtoken");
-const User = require("../models/User");
+const jwt = require('jsonwebtoken');
+const asyncHandler = require('express-async-handler');
+const User = require('../models/User');
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -61,7 +62,6 @@ const protect = async (req, res, next) => {
       ...(isProduction ? {} : { error: error.message })
     });
   }
-};
 
 const admin = (req, res, next) => {
   if (req.user && req.user.role === "admin") {
