@@ -22,7 +22,14 @@ const readStoredApiBase = () => {
 
 const API_BASE = (() => {
   const override = normalizeApiBase(window.__API_BASE__);
-  if (override) return override;
+  if (override) {
+    const isSecureWeb = window.location.protocol === "https:" && !isNativePlatform();
+    const isInsecureOverride = /^http:\/\//i.test(override);
+    // Prevent broken production deploys caused by committed local http API overrides.
+    if (!(isSecureWeb && isInsecureOverride)) {
+      return override;
+    }
+  }
 
   const stored = readStoredApiBase();
   if (stored) return stored;
