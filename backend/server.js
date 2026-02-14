@@ -55,10 +55,20 @@ const isLocalDevOrigin = (origin) => {
   }
 };
 
+const isTrustedHostedOrigin = (origin) => {
+  try {
+    const parsed = new URL(origin);
+    return parsed.protocol === "https:" && parsed.hostname.endsWith(".onrender.com");
+  } catch (_error) {
+    return false;
+  }
+};
+
 const isOriginAllowed = (origin) => {
   if (!origin) return true;
   if (allowAllOrigins || allowAnyOriginByDefault) return true;
   if (isLocalDevOrigin(origin)) return true;
+  if (isTrustedHostedOrigin(origin)) return true;
   if (allowedOrigins.includes("*")) return true;
   return allowedOrigins.includes(origin);
 };
