@@ -1,6 +1,5 @@
-const jwt = require('jsonwebtoken');
-const asyncHandler = require('express-async-handler');
-const User = require('../models/User');
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -62,6 +61,7 @@ const protect = async (req, res, next) => {
       ...(isProduction ? {} : { error: error.message })
     });
   }
+};
 
 const admin = (req, res, next) => {
   if (req.user && req.user.role === "admin") {
@@ -72,6 +72,24 @@ const admin = (req, res, next) => {
     success: false,
     message: "Access denied - Admins only"
   });
+};
+
+const authorizeRoles = (...roles) => (req, res, next) => {
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "Not authorized"
+    });
+  }
+
+  if (!roles.includes(req.user.role)) {
+    return res.status(403).json({
+      success: false,
+      message: `Access denied - allowed roles: ${roles.join(", ")}`
+    });
+  }
+
+  return next();
 };
 
 const optionalAuth = async (req, _res, next) => {
@@ -99,4 +117,4 @@ const optionalAuth = async (req, _res, next) => {
   }
 };
 
-module.exports = { protect, admin, optionalAuth };
+module.exports = { protect, admin, authorizeRoles, optionalAuth };

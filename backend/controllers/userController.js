@@ -1,3 +1,4 @@
+// backend/controllers/userController.js
 const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const isProduction = process.env.NODE_ENV === "production";
@@ -25,8 +26,8 @@ const generateToken = (id) => {
 
 // Register User
 const registerUser = async (req, res) => {
-  try {
-    const { name, email, phone, password, role } = req.body;
+  try {
+    const { name, email, phone, password, role } = req.body;
 
     if (!name || !email || !phone || !password) {
       return res.status(400).json({ 
@@ -85,47 +86,8 @@ const registerUser = async (req, res) => {
 
 // Login User
 const loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
-
-    const user = await User.findOne({ email }).select("+password");
-    if (!user) return res.status(401).json({ message: "Invalid credentials" });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
-
-    res.status(200).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      token: generateToken(user._id),
-      // Also send user object for frontend to save
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-      }
-    });
-  } catch (error) {
-    console.error("❌ Login error:", error);
-    res.status(500).json({ message: "Error logging in", error: error.message });
-  }
-};
-
-// @desc    Get user profile
-// @route   GET /api/users/profile
-// @access  Private (needs token)
-const getUserProfile = async (req, res) => {
   try {
-    // req.user is attached by the 'protect' middleware.
-    // We just find that user again to be safe.
-    const user = await User.findById(req.user._id).select('-password');
+    const { email, password } = req.body;
 
     if (!email || !password) {
       return res.status(400).json({ 
@@ -350,6 +312,48 @@ const getTopAllRounders = async (req, res) => {
   }
 };
 
+const updateUserRole = async (req, res) => {
+  try {
+    const { userId, role } = req.body;
+    const allowedRoles = ['admin', 'user', 'scorer', 'organizer', 'turf_owner'];
+
+    if (!userId || !role) {
+      return res.status(400).json({
+        success: false,
+        message: 'userId and role are required'
+      });
+    }
+
+    if (!allowedRoles.includes(String(role))) {
+      return res.status(400).json({
+        success: false,
+        message: `role must be one of: ${allowedRoles.join(', ')}`
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: { role: String(role) } },
+      { new: true, runValidators: true }
+    ).select('-password');
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: 'User role updated successfully',
+      user
+    });
+  } catch (error) {
+    return sendServerError(res, 'Error updating user role', error);
+  }
+};
+
 // ========== USER PROFILE MANAGEMENT ==========
 
 // Get user profile
@@ -545,6 +549,7 @@ module.exports = {
   getTopBatsmen,
   getTopBowlers,
   getTopAllRounders,
+  updateUserRole,
   followUser,
   unfollowUser
 };

@@ -26,9 +26,27 @@ const teamSchema = new mongoose.Schema({
       type: String,
       required: true
     },
+    email: {
+      type: String,
+      default: null
+    },
     isRegistered: {
       type: Boolean,
       default: false
+    },
+    inviteStatus: {
+      type: String,
+      enum: ['pending', 'accepted', 'rejected'],
+      default: 'accepted'
+    },
+    invitedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null
+    },
+    respondedAt: {
+      type: Date,
+      default: null
     },
     addedAt: {
       type: Date,

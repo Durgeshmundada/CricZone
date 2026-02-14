@@ -85,8 +85,10 @@ const resolveTeamMemberLinks = (teamDoc) => {
       const hasRegisteredId = resolvedId && isValidObjectId(resolvedId);
       const resolvedName = String(playerDoc?.name || member.name || '').trim();
       const resolvedEmail = String(playerDoc?.email || '').trim().toLowerCase();
+      const inviteStatus = String(member?.inviteStatus || 'accepted').toLowerCase();
 
       if (!resolvedName) return null;
+      if (hasRegisteredId && inviteStatus !== 'accepted') return null;
       return {
         name: resolvedName,
         email: resolvedEmail,
@@ -1605,6 +1607,236 @@ exports.deleteMatch = async (req, res) => {
     });
   } catch (error) {
     return sendServerError(res, 'Failed to delete match', error);
+  }
+};
+
+const asCsvValue = (value) => {
+  if (value === null || value === undefined) return '';
+  const text = String(value);
+  if (/[",\n]/.test(text)) {
+    return `"${text.replace(/"/g, '""')}"`;
+  }
+  return text;
+};
+
+const formatInningOvers = (inning = {}) => `${Number(inning.overs || 0)}.${Number(inning.balls || 0)}`;
+
+const buildResultText = (match) => {
+  if (!match) return '';
+  if (match.resultType === 'tie' || String(match.winner || '').toLowerCase() === 'tie') {
+    return 'Match tied';
+  }
+  if (!match.winner) return 'Result pending';
+  if (match.resultType === 'runs') {
+    return `${match.winner} won by ${Number(match.resultMargin || 0)} runs`;
+  }
+  if (match.resultType === 'wickets') {
+    return `${match.winner} won by ${Number(match.resultMargin || 0)} wickets`;
+  }
+  return `${match.winner} won`;
+};
+
+const buildMatchReportPayload = (match) => {
+  const firstInning = match.innings?.first || {};
+  const secondInning = match.innings?.second || {};
+  const batsmanStats = Array.isArray(match.batsmanStats) ? match.batsmanStats : [];
+  const bowlerStats = Array.isArray(match.bowlerStats) ? match.bowlerStats : [];
+
+  return {
+    meta: {
+      matchId: String(match._id),
+      matchName: match.matchName,
+      matchType: match.matchType,
+      venue: match.venue,
+      matchDate: match.matchDate,
+      status: match.status,
+      result: buildResultText(match),
+      winner: match.winner || null
+    },
+    teams: {
+      teamA: {
+        name: match.teamA?.name || 'Team A',
+        score: Number(match.teamA?.score || 0),
+        wickets: Number(match.teamA?.wickets || 0),
+        overs: match.teamA?.overs || '0.0'
+      },
+      teamB: {
+        name: match.teamB?.name || 'Team B',
+        score: Number(match.teamB?.score || 0),
+        wickets: Number(match.teamB?.wickets || 0),
+        overs: match.teamB?.overs || '0.0'
+      }
+    },
+    innings: [
+      {
+        inning: 1,
+        battingTeam: firstInning.battingTeam === 'teamB' ? (match.teamB?.name || 'Team B') : (match.teamA?.name || 'Team A'),
+        bowlingTeam: firstInning.bowlingTeam === 'teamB' ? (match.teamB?.name || 'Team B') : (match.teamA?.name || 'Team A'),
+        score: Number(firstInning.score || 0),
+        wickets: Number(firstInning.wickets || 0),
+        overs: formatInningOvers(firstInning),
+        runRate: Number(firstInning.runRate || 0),
+        extras: {
+          total: Number(firstInning.extras?.total || 0),
+          wides: Number(firstInning.extras?.wides || 0),
+          noBalls: Number(firstInning.extras?.noBalls || 0),
+          byes: Number(firstInning.extras?.byes || 0),
+          legByes: Number(firstInning.extras?.legByes || 0)
+        }
+      },
+      {
+        inning: 2,
+        battingTeam: secondInning.battingTeam === 'teamB' ? (match.teamB?.name || 'Team B') : (match.teamA?.name || 'Team A'),
+        bowlingTeam: secondInning.bowlingTeam === 'teamB' ? (match.teamB?.name || 'Team B') : (match.teamA?.name || 'Team A'),
+        score: Number(secondInning.score || 0),
+        wickets: Number(secondInning.wickets || 0),
+        overs: formatInningOvers(secondInning),
+        runRate: Number(secondInning.runRate || 0),
+        target: Number(secondInning.target || 0),
+        extras: {
+          total: Number(secondInning.extras?.total || 0),
+          wides: Number(secondInning.extras?.wides || 0),
+          noBalls: Number(secondInning.extras?.noBalls || 0),
+          byes: Number(secondInning.extras?.byes || 0),
+          legByes: Number(secondInning.extras?.legByes || 0)
+        }
+      }
+    ],
+    topPerformers: {
+      batsmen: batsmanStats
+        .slice()
+        .sort((a, b) => Number(b.runs || 0) - Number(a.runs || 0))
+        .slice(0, 5)
+        .map((row) => ({
+          name: row.name,
+          inning: Number(row.inning || 0),
+          runs: Number(row.runs || 0),
+          balls: Number(row.ballsFaced || 0),
+          fours: Number(row.fours || 0),
+          sixes: Number(row.sixes || 0),
+          strikeRate: Number(row.strikeRate || 0),
+          isOut: Boolean(row.isOut)
+        })),
+      bowlers: bowlerStats
+        .slice()
+        .sort((a, b) => {
+          const wicketDiff = Number(b.wickets || 0) - Number(a.wickets || 0);
+          if (wicketDiff !== 0) return wicketDiff;
+          return Number(a.runs || 0) - Number(b.runs || 0);
+        })
+        .slice(0, 5)
+        .map((row) => ({
+          name: row.name,
+          inning: Number(row.inning || 0),
+          overs: Number(row.overs || 0),
+          balls: Number(row.balls || 0),
+          runs: Number(row.runs || 0),
+          wickets: Number(row.wickets || 0),
+          economy: Number(row.economy || 0),
+          wides: Number(row.wides || 0),
+          noBalls: Number(row.noBalls || 0)
+        }))
+    }
+  };
+};
+
+const buildMatchReportCsv = (report) => {
+  const rows = [];
+  rows.push(['field', 'value']);
+  rows.push(['match_id', report.meta.matchId]);
+  rows.push(['match_name', report.meta.matchName]);
+  rows.push(['match_type', report.meta.matchType]);
+  rows.push(['venue', report.meta.venue]);
+  rows.push(['match_date', report.meta.matchDate ? new Date(report.meta.matchDate).toISOString() : '']);
+  rows.push(['status', report.meta.status]);
+  rows.push(['result', report.meta.result]);
+  rows.push(['winner', report.meta.winner || '']);
+  rows.push([]);
+
+  rows.push(['inning', 'batting_team', 'bowling_team', 'score', 'wickets', 'overs', 'run_rate', 'target', 'extras_total', 'wides', 'no_balls', 'byes', 'leg_byes']);
+  report.innings.forEach((inning) => {
+    rows.push([
+      inning.inning,
+      inning.battingTeam,
+      inning.bowlingTeam,
+      inning.score,
+      inning.wickets,
+      inning.overs,
+      inning.runRate,
+      inning.target || '',
+      inning.extras.total,
+      inning.extras.wides,
+      inning.extras.noBalls,
+      inning.extras.byes,
+      inning.extras.legByes
+    ]);
+  });
+  rows.push([]);
+
+  rows.push(['top_batsmen']);
+  rows.push(['name', 'inning', 'runs', 'balls', 'fours', 'sixes', 'strike_rate', 'is_out']);
+  report.topPerformers.batsmen.forEach((batsman) => {
+    rows.push([
+      batsman.name,
+      batsman.inning,
+      batsman.runs,
+      batsman.balls,
+      batsman.fours,
+      batsman.sixes,
+      batsman.strikeRate,
+      batsman.isOut ? 'yes' : 'no'
+    ]);
+  });
+  rows.push([]);
+
+  rows.push(['top_bowlers']);
+  rows.push(['name', 'inning', 'overs', 'balls', 'runs', 'wickets', 'economy', 'wides', 'no_balls']);
+  report.topPerformers.bowlers.forEach((bowler) => {
+    rows.push([
+      bowler.name,
+      bowler.inning,
+      bowler.overs,
+      bowler.balls,
+      bowler.runs,
+      bowler.wickets,
+      bowler.economy,
+      bowler.wides,
+      bowler.noBalls
+    ]);
+  });
+
+  return rows.map((row) => row.map(asCsvValue).join(',')).join('\n');
+};
+
+// @desc Get downloadable match report (JSON/CSV)
+// @route GET /api/matches/:id/report
+// @access Public
+exports.getMatchReport = async (req, res) => {
+  try {
+    const match = await Match.findById(req.params.id);
+    if (!match) {
+      return res.status(404).json({
+        success: false,
+        message: 'Match not found'
+      });
+    }
+
+    const report = buildMatchReportPayload(match);
+    const format = String(req.query.format || 'json').toLowerCase();
+
+    if (format === 'csv') {
+      const csv = buildMatchReportCsv(report);
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="match-report-${match._id}.csv"`);
+      return res.status(200).send(csv);
+    }
+
+    return res.json({
+      success: true,
+      report
+    });
+  } catch (error) {
+    return sendServerError(res, 'Failed to build match report', error);
   }
 };
 

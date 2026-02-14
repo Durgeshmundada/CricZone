@@ -656,7 +656,8 @@ body {
 .start-match-btn,
 .update-score-btn,
 .complete-match-btn,
-.book-btn {
+.book-btn,
+.download-report-btn {
   border: 0;
   border-radius: 10px;
   background: linear-gradient(130deg, var(--primary), #0f9d5f);
@@ -671,9 +672,22 @@ body {
 .start-match-btn:hover,
 .update-score-btn:hover,
 .complete-match-btn:hover,
-.book-btn:hover {
+.book-btn:hover,
+.download-report-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 9px 18px rgba(11, 122, 75, 0.36);
+}
+
+.download-report-btn {
+  background: linear-gradient(130deg, #1e5c89, #19466f);
+}
+
+.match-actions-inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .tournament-card {
@@ -837,6 +851,22 @@ body {
   transform: none;
 }
 
+.form-card .btn-secondary {
+  width: 100%;
+  border-radius: 10px;
+  padding: 0.72rem 0.9rem;
+  background: #eaf5ef;
+  color: #0d5b3b;
+  border: 1px solid rgba(11, 122, 75, 0.28);
+  box-shadow: none;
+  font-weight: 700;
+}
+
+.form-card .btn-secondary:hover {
+  background: #dff1e7;
+  color: #0a4a30;
+}
+
 .action-row {
   margin-bottom: 1rem;
   max-width: 360px;
@@ -877,6 +907,46 @@ body {
   margin-top: 1rem;
 }
 
+.billing-controls {
+  max-width: 820px;
+  margin: 0 auto 1rem;
+  border-radius: 14px;
+  background: #fff;
+  border: 1px solid rgba(19, 32, 36, 0.1);
+  box-shadow: var(--shadow-soft);
+  padding: 0.95rem;
+}
+
+.billing-table-panel {
+  margin-top: 1rem;
+}
+
+.billing-table td,
+.billing-table th {
+  vertical-align: middle;
+}
+
+.billing-action-btn {
+  border: 0;
+  border-radius: 8px;
+  padding: 0.4rem 0.65rem;
+  font-weight: 700;
+  cursor: pointer;
+  color: #fff;
+  background: #1e5c89;
+}
+
+.billing-action-btn:hover {
+  background: #19466f;
+}
+
+.billing-payment-select {
+  border: 1px solid rgba(19, 32, 36, 0.2);
+  border-radius: 7px;
+  padding: 0.32rem 0.4rem;
+  min-width: 108px;
+}
+
 .players-search {
   display: grid;
   grid-template-columns: 1fr 170px;
@@ -907,6 +977,138 @@ body {
   border: 1px solid rgba(19, 32, 36, 0.1);
   box-shadow: var(--shadow-soft);
   padding: 0.95rem;
+}
+
+.team-invite-card {
+  background: var(--card-gradient);
+  border-radius: 14px;
+  border: 1px solid rgba(19, 32, 36, 0.1);
+  box-shadow: var(--shadow-soft);
+  padding: 0.9rem;
+  margin-bottom: 0.75rem;
+}
+
+.team-invite-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.6rem;
+}
+
+.team-accept-btn,
+.team-reject-btn,
+.team-suggestion-add-btn {
+  border: 0;
+  border-radius: 9px;
+  padding: 0.48rem 0.72rem;
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.team-accept-btn {
+  background: #0b7a4b;
+}
+
+.team-reject-btn {
+  background: #c72f3d;
+}
+
+.team-suggestion-add-btn {
+  background: #1e5c89;
+}
+
+.team-playing-selector {
+  margin-top: 0.65rem;
+  border: 1px solid rgba(19, 32, 36, 0.12);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.8);
+  padding: 0.65rem;
+}
+
+.team-playing-selector .selector-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.45rem;
+}
+
+.team-playing-selector .selector-head p {
+  margin: 0;
+  font-size: 0.78rem;
+  color: #3f575d;
+}
+
+.selector-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.selector-actions button {
+  border: 1px solid rgba(19, 32, 36, 0.2);
+  background: #fff;
+  border-radius: 8px;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.team-playing-selector .selector-list {
+  display: grid;
+  gap: 0.35rem;
+}
+
+.team-playing-selector .selector-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  color: #243f45;
+}
+
+.team-playing-selector .selector-item small {
+  color: #5b6f73;
+}
+
+.tournament-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+}
+
+.tournament-join-panel {
+  margin-top: 0.9rem;
+  border-top: 1px solid rgba(19, 32, 36, 0.12);
+  padding-top: 0.8rem;
+}
+
+.tournament-join-panel.hidden {
+  display: none;
+}
+
+.tournament-join-panel .join-players {
+  margin-top: 0.55rem;
+  display: grid;
+  gap: 0.35rem;
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 0.2rem;
+}
+
+.tournament-join-panel .join-player-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: #244147;
+}
+
+.tournament-join-panel .join-help {
+  margin-top: 0.35rem;
+  font-size: 0.74rem;
+  color: #5a7074;
 }
 
 .player-card-head {
@@ -1669,6 +1871,11 @@ body {
   .match-footer {
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .match-actions-inline {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .runs-buttons {

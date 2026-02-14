@@ -1,5 +1,7 @@
 // backend/controllers/tournamentController.js
+const mongoose = require("mongoose");
 const Tournament = require("../models/Tournament");
+const Team = require("../models/Team");
 const isProduction = process.env.NODE_ENV === "production";
 
 const sendServerError = (res, message, error) => {
@@ -35,6 +37,71 @@ const parseOversToDecimal = (rawOvers) => {
 
   return overs + (balls / 6);
 };
+
+const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(String(value || ""));
+
+const normalizeTournamentPlayersInput = (players = []) => {
+  if (!Array.isArray(players)) return [];
+
+  return players
+    .map((player) => {
+      if (!player) return null;
+
+      if (typeof player === "string") {
+        const name = String(player).trim();
+        if (!name) return null;
+        return { name, playerId: null, role: undefined, jerseyNumber: undefined };
+      }
+
+      if (typeof player === "object") {
+        const name = String(player.name || "").trim();
+        const playerIdRaw = player.playerId || player.userId || player.id || null;
+        const playerId = isValidObjectId(playerIdRaw) ? String(playerIdRaw) : null;
+        if (!name && !playerId) return null;
+        return {
+          name: name || "Player",
+          playerId,
+          role: player.role || undefined,
+          jerseyNumber: Number.isFinite(Number(player.jerseyNumber))
+            ? Number(player.jerseyNumber)
+            : undefined
+        };
+      }
+
+      return null;
+    })
+    .filter(Boolean);
+};
+
+const getTeamAcceptedPlayers = (teamDoc) => {
+  if (!teamDoc || !Array.isArray(teamDoc.members)) return [];
+
+  const seen = new Set();
+  const accepted = [];
+  teamDoc.members.forEach((member) => {
+    const inviteStatus = String(member?.inviteStatus || "accepted").toLowerCase();
+    const playerDoc = member.player && typeof member.player === "object" ? member.player : null;
+    const playerId = playerDoc?._id || member.player || null;
+    const name = String(playerDoc?.name || member?.name || "").trim();
+    if (!name) return;
+    if (playerId && inviteStatus !== "accepted") return;
+
+    const key = playerId
+      ? `id:${String(playerId)}`
+      : `name:${name.toLowerCase()}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+
+    accepted.push({
+      name,
+      playerId: playerId ? String(playerId) : null
+    });
+  });
+
+  return accepted;
+};
+
+const normalizePersonName = (value = "") => String(value || "").trim().toLowerCase();
 
 // ========== BASIC CRUD OPERATIONS ==========
 
@@ -229,11 +296,18 @@ exports.registerTeam = async (req, res) => {
     } = req.body;
     const tournamentId = req.params.id;
 
-    // Validation
-    if (!teamName || !captain || !Array.isArray(players) || players.length === 0) {
-      return res.status(400).json({ 
+    let resolvedTeamId = isValidObjectId(teamId) ? String(teamId) : null;
+    let resolvedTeamName = String(teamName || "").trim();
+    let resolvedCaptain = String(captain || "").trim();
+    const resolvedViceCaptain = String(viceCaptain || "").trim();
+    const resolvedWicketkeeper = String(wicketkeeper || "").trim();
+    const resolvedCoach = String(coach || "").trim();
+    let resolvedPlayers = normalizeTournamentPlayersInput(players || []);
+
+    if (teamId && !resolvedTeamId) {
+      return res.status(400).json({
         success: false,
-        message: "Please provide team name, captain, and players" 
+        message: "Invalid teamId"
       });
     }
 
@@ -261,9 +335,94 @@ exports.registerTeam = async (req, res) => {
       });
     }
 
+    if (resolvedTeamId) {
+      const savedTeam = await Team.findById(resolvedTeamId).populate("members.player", "name email");
+      if (!savedTeam) {
+        return res.status(404).json({
+          success: false,
+          message: "Selected team not found"
+        });
+      }
+
+      if (String(savedTeam.owner) !== String(req.user._id)) {
+        return res.status(403).json({
+          success: false,
+          message: "Only team owner can register this team"
+        });
+      }
+
+      const acceptedMembers = getTeamAcceptedPlayers(savedTeam);
+      if (acceptedMembers.length === 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Selected team has no accepted players"
+        });
+      }
+
+      const acceptedById = new Map(
+        acceptedMembers
+          .filter((member) => member.playerId)
+          .map((member) => [String(member.playerId), member])
+      );
+      const acceptedByName = new Map(
+        acceptedMembers.map((member) => [normalizePersonName(member.name), member])
+      );
+
+      if (resolvedPlayers.length === 0) {
+        resolvedPlayers = acceptedMembers.map((member) => ({
+          name: member.name,
+          playerId: member.playerId
+        }));
+      } else {
+        const filteredPlayers = [];
+        const seen = new Set();
+
+        for (const rawPlayer of resolvedPlayers) {
+          const normalizedName = normalizePersonName(rawPlayer.name);
+          const byId = rawPlayer.playerId ? acceptedById.get(String(rawPlayer.playerId)) : null;
+          const byName = normalizedName ? acceptedByName.get(normalizedName) : null;
+          const matched = byId || byName || null;
+          if (!matched) {
+            return res.status(400).json({
+              success: false,
+              message: `Player '${rawPlayer.name}' is not an accepted member of selected team`
+            });
+          }
+
+          const key = matched.playerId
+            ? `id:${String(matched.playerId)}`
+            : `name:${normalizePersonName(matched.name)}`;
+          if (seen.has(key)) continue;
+          seen.add(key);
+
+          filteredPlayers.push({
+            name: matched.name,
+            playerId: matched.playerId
+          });
+        }
+
+        resolvedPlayers = filteredPlayers;
+      }
+
+      if (!resolvedCaptain && resolvedPlayers.length > 0) {
+        resolvedCaptain = resolvedPlayers[0].name;
+      }
+      if (!resolvedTeamName) {
+        resolvedTeamName = String(savedTeam.name || "").trim();
+      }
+    }
+
+    // Validation
+    if (!resolvedTeamName || !resolvedCaptain || resolvedPlayers.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Please provide team name, captain, and players" 
+      });
+    }
+
     // Check if team name already exists
     const teamExists = tournament.registeredTeams.some(
-      t => t.teamName.toLowerCase() === teamName.toLowerCase()
+      (t) => String(t.teamName || "").toLowerCase() === resolvedTeamName.toLowerCase()
     );
     if (teamExists) {
       return res.status(400).json({ 
@@ -272,9 +431,9 @@ exports.registerTeam = async (req, res) => {
       });
     }
 
-    if (teamId) {
+    if (resolvedTeamId) {
       const duplicateTeamId = tournament.registeredTeams.some(
-        (team) => team.teamId && team.teamId.toString() === String(teamId)
+        (team) => team.teamId && team.teamId.toString() === String(resolvedTeamId)
       );
       if (duplicateTeamId) {
         return res.status(400).json({
@@ -285,22 +444,63 @@ exports.registerTeam = async (req, res) => {
     }
 
     // Validate player count
-    if (players.length < tournament.minPlayers || players.length > tournament.maxPlayers) {
+    if (resolvedPlayers.length < tournament.minPlayers || resolvedPlayers.length > tournament.maxPlayers) {
       return res.status(400).json({ 
         success: false,
         message: `Team must have between ${tournament.minPlayers} and ${tournament.maxPlayers} players` 
       });
     }
 
+    const hasCaptainInPlayers = resolvedPlayers.some(
+      (player) => normalizePersonName(player.name) === normalizePersonName(resolvedCaptain)
+    );
+    if (!hasCaptainInPlayers) {
+      return res.status(400).json({
+        success: false,
+        message: "Captain must be selected from team players"
+      });
+    }
+
+    if (resolvedViceCaptain) {
+      const hasViceCaptainInPlayers = resolvedPlayers.some(
+        (player) => normalizePersonName(player.name) === normalizePersonName(resolvedViceCaptain)
+      );
+      if (!hasViceCaptainInPlayers) {
+        return res.status(400).json({
+          success: false,
+          message: "Vice captain must be selected from team players"
+        });
+      }
+    }
+
+    if (resolvedWicketkeeper) {
+      const hasWicketkeeperInPlayers = resolvedPlayers.some(
+        (player) => normalizePersonName(player.name) === normalizePersonName(resolvedWicketkeeper)
+      );
+      if (!hasWicketkeeperInPlayers) {
+        return res.status(400).json({
+          success: false,
+          message: "Wicketkeeper must be selected from team players"
+        });
+      }
+    }
+
+    const registrationPlayers = resolvedPlayers.map((player) => ({
+      name: String(player.name || "").trim(),
+      ...(player.playerId ? { playerId: player.playerId } : {}),
+      ...(player.role ? { role: player.role } : {}),
+      ...(Number.isFinite(player.jerseyNumber) ? { jerseyNumber: player.jerseyNumber } : {})
+    }));
+
     // Add team to tournament
     tournament.registeredTeams.push({
-      teamId,
-      teamName,
-      captain,
-      viceCaptain,
-      wicketkeeper,
-      coach,
-      players,
+      teamId: resolvedTeamId,
+      teamName: resolvedTeamName,
+      captain: resolvedCaptain,
+      viceCaptain: resolvedViceCaptain || undefined,
+      wicketkeeper: resolvedWicketkeeper || undefined,
+      coach: resolvedCoach || undefined,
+      players: registrationPlayers,
       group,
       registeredBy: req.user._id,
       stats: {
@@ -316,8 +516,8 @@ exports.registerTeam = async (req, res) => {
 
     // Add to standings
     tournament.standings.push({
-      teamName,
-      teamId,
+      teamName: resolvedTeamName,
+      teamId: resolvedTeamId,
       position: tournament.standings.length + 1,
       played: 0,
       won: 0,
@@ -373,11 +573,20 @@ exports.unregisterTeam = async (req, res) => {
       teamName && String(team.teamName).toLowerCase() === String(teamName).toLowerCase();
     const matchesTeam = (team) => Boolean(byTeamId(team) || byTeamName(team));
 
-    const wasRegistered = tournament.registeredTeams.some(matchesTeam);
-    if (!wasRegistered) {
+    const targetTeam = tournament.registeredTeams.find(matchesTeam);
+    if (!targetTeam) {
       return res.status(404).json({
         success: false,
         message: "Team not registered in this tournament"
+      });
+    }
+
+    const isTournamentOwner = String(tournament.createdBy || "") === String(req.user._id || "");
+    const isTeamRegistrant = String(targetTeam.registeredBy || "") === String(req.user._id || "");
+    if (!isTournamentOwner && !isTeamRegistrant) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to unregister this team"
       });
     }
 

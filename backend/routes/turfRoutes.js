@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { protect, admin } = require('../middleware/authMiddleware');
+const { protect, authorizeRoles } = require('../middleware/authMiddleware');
 const Turf = require('../models/Turf');
 
 const isProduction = process.env.NODE_ENV === 'production';
@@ -82,7 +82,7 @@ const normalizeLocation = (location) => {
   };
 };
 
-router.post('/add', protect, admin, async (req, res) => {
+router.post('/add', protect, authorizeRoles('admin', 'turf_owner'), async (req, res) => {
   try {
     const {
       turfName,
@@ -191,6 +191,23 @@ router.get('/all', async (_req, res) => {
   }
 });
 
+router.get('/owned', protect, authorizeRoles('admin', 'turf_owner'), async (req, res) => {
+  try {
+    const query = req.user.role === 'admin' ? {} : { ownerId: req.user._id };
+    const turfs = await Turf.find(query)
+      .populate('ownerId', 'name email phone')
+      .sort({ createdAt: -1 });
+
+    return res.status(200).json({
+      success: true,
+      count: turfs.length,
+      data: turfs
+    });
+  } catch (error) {
+    return sendServerError(res, 'Error fetching owned turfs', error);
+  }
+});
+
 router.post('/nearby', async (req, res) => {
   try {
     const { latitude, longitude, maxDistance = 5000 } = req.body;
@@ -250,7 +267,7 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-router.put('/:id', protect, admin, async (req, res) => {
+router.put('/:id', protect, authorizeRoles('admin', 'turf_owner'), async (req, res) => {
   try {
     const turf = await Turf.findById(req.params.id);
 
@@ -262,6 +279,15 @@ router.put('/:id', protect, admin, async (req, res) => {
     }
 
     const { ownerId, _id, ...updates } = req.body;
+
+    const isAdmin = req.user.role === 'admin';
+    const isOwner = String(turf.ownerId) === String(req.user._id);
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this turf'
+      });
+    }
 
     if (updates.sportTypes !== undefined) {
       let normalizedSportTypes;
@@ -345,7 +371,7 @@ router.put('/:id', protect, admin, async (req, res) => {
   }
 });
 
-router.delete('/:id', protect, admin, async (req, res) => {
+router.delete('/:id', protect, authorizeRoles('admin', 'turf_owner'), async (req, res) => {
   try {
     const turf = await Turf.findById(req.params.id);
 
@@ -353,6 +379,15 @@ router.delete('/:id', protect, admin, async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'Turf not found'
+      });
+    }
+
+    const isAdmin = req.user.role === 'admin';
+    const isOwner = String(turf.ownerId) === String(req.user._id);
+    if (!isAdmin && !isOwner) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to delete this turf'
       });
     }
 

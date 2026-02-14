@@ -11,7 +11,8 @@ const {
   completeMatch,
   getUserMatches,
   deleteMatch,
-  getMatchHighlights
+  getMatchHighlights,
+  getMatchReport
 } = require('../controllers/matchController');
 
 const { protect } = require('../middleware/authMiddleware');
@@ -33,9 +34,11 @@ router.post('/', protect, createMatch);
 
 // ========== DYNAMIC ROUTES (Match ID based) ==========
 
+router.get('/:id/highlights', getMatchHighlights);
+router.get('/:id/report', getMatchReport);
+
 // Get match details by ID
 router.get('/:id', getMatch);
-router.get('/:id/highlights', getMatchHighlights);
 
 // Set toss and start match
 router.put('/:id/toss', protect, setMatchToss);

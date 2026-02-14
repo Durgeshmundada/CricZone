@@ -1,4 +1,4 @@
-const STATIC_CACHE = "criczone-static-v2";
+const STATIC_CACHE = "criczone-static-v4";
 const STATIC_ASSETS = [
   "/",
   "/index.html",

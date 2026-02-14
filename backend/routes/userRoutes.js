@@ -11,18 +11,13 @@ const {
   getTopBatsmen,
   getTopBowlers,
   getTopAllRounders,
+  updateUserRole,
   followUser,
   unfollowUser
 } = require("../controllers/userController");
-const { protect } = require("../middleware/authMiddleware");
+const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 
 const router = express.Router();
-const { 
-  registerUser, 
-  loginUser, 
-  getUserProfile 
-} = require("../controllers/userController");
-const { protect } = require('../middleware/authMiddleware');
 
 // ========== AUTHENTICATION ROUTES ==========
 router.post("/register", registerUser);
@@ -49,6 +44,9 @@ router.get("/profile", protect, getUserProfile);
 
 // Update own profile (protected)
 router.put("/profile", protect, updateUserProfile);
+
+// Admin only role management (for turf owner/admin/user assignment)
+router.put("/role", protect, authorizeRoles("admin"), updateUserRole);
 
 // ========== SOCIAL FEATURES (Feature #10: Community) ==========
 // Follow/Unfollow users (protected)
