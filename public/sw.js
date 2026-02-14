@@ -1,9 +1,10 @@
-const STATIC_CACHE = "criczone-static-v1";
+const STATIC_CACHE = "criczone-static-v2";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
   "/styles.css",
   "/script.js",
+  "/runtime-config.js",
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png"
