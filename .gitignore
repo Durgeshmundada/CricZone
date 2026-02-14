@@ -1,37 +1,26 @@
+# Dependencies
 node_modules/
-.env
-DurgeshSSh
-DurgeshSSh.pub
-# ===================================
-# Node.js & Backend
-# ===================================
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-pnpm-debug.log*
-package-lock.json
+backend/node_modules/
+mobile/node_modules/
 
-# Environment variables
+# Environment files
 .env
 .env.local
 .env.development
 .env.test
 .env.production
-config
+.env.*
+!.env.example
+!backend/.env.example
+
 # Logs
 logs/
 *.log
 debug.log
 error.log
 out.log
-.env
-.env.local
-.env.production
-.env
-.env.*
 
-# Temporary and cache files
+# Build and cache
 tmp/
 temp/
 .cache/
@@ -40,30 +29,23 @@ build/
 coverage/
 .DS_Store
 
-# ===================================
-# Frontend (if using HTML/CSS/JS or React)
-# ===================================
+# Legacy frontend folder artifacts
 frontend/node_modules/
 frontend/build/
 frontend/dist/
 frontend/.env
 
-# ===================================
-# System / Editor files
-# ===================================
+# Editor/system
 .vscode/
 .idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
-
-# ===================================
-# Miscellaneous
-# ===================================
 Thumbs.db
-.env.*
 *.bak
 *.swp
-package-lock.json
-package.json
+
+# Local keys
+DurgeshSSh
+DurgeshSSh.pub
