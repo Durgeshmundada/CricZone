@@ -25,6 +25,11 @@ logs/
 debug.log
 error.log
 out.log
+.env
+.env.local
+.env.production
+.env
+.env.*
 
 # Temporary and cache files
 tmp/

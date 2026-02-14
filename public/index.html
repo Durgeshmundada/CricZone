@@ -1,0 +1,545 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="CricZone helps you host local cricket matches, run live scoring, manage tournaments, and book turfs." />
+  <meta name="theme-color" content="#0b7a4b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CricZone" />
+  <title>CricZone | Local Cricket Control Center</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b7a4b'/%3E%3Cpath d='M42 20c-3-4-10-5-15-2l2 4c4-2 8-1 10 2 2 4-1 10-6 12-4 2-8 1-11-2l-3 3c4 5 12 6 18 3 7-4 10-13 5-20Z' fill='white'/%3E%3C/svg%3E" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="backdrop-grid" aria-hidden="true"></div>
+
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="nav-brand" onclick="window.showPage('home')" role="button" tabindex="0">
+        <span class="brand-icon">CZ</span>
+        <span class="brand-name">CricZone</span>
+      </div>
+
+      <button id="menuToggle" class="menu-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
+        <span></span>
+        <span></span>
+      </button>
+
+      <div class="nav-menu" id="navMenu">
+        <ul class="nav-links">
+          <li><a class="nav-link" data-page="home">Home</a></li>
+          <li><a class="nav-link" data-page="players">Players</a></li>
+          <li><a class="nav-link" data-page="host-match">Host Match</a></li>
+          <li><a class="nav-link" data-page="my-matches">My Matches</a></li>
+          <li><a class="nav-link" data-page="tournaments">Tournaments</a></li>
+          <li><a class="nav-link" data-page="my-stats">My Stats</a></li>
+          <li><a class="nav-link" data-page="book-turf">Book Turf</a></li>
+        </ul>
+
+        <div class="nav-actions">
+          <button id="navApiConfig" class="btn-logout nav-api-btn" type="button" style="display: none">API URL</button>
+          <div class="nav-auth" id="navAuth" style="display: none">
+            <span id="navUserEmail" class="user-email"></span>
+            <button id="logoutBtn" class="btn-logout">Logout</button>
+          </div>
+          <a id="navLogin" class="nav-link" data-page="login">Login</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <div id="toastContainer" class="toast-container"></div>
+  <button id="installAppBtn" class="install-app-btn" type="button" style="display: none;">Install App</button>
+
+  <div id="customModal" class="custom-modal">
+    <div class="modal-overlay"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle">Title</h3>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p id="modalMessage">Message</p>
+        <input type="text" id="modalInput" class="modal-input" placeholder="Enter value..." />
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn modal-btn-secondary" id="modalCancel">Cancel</button>
+        <button class="modal-btn modal-btn-primary" id="modalConfirm">OK</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="home" class="page">
+    <section class="hero">
+      <div class="hero-glow" aria-hidden="true"></div>
+      <div class="container hero-layout">
+        <div class="hero-copy reveal">
+          <p class="eyebrow">Community Cricket Platform</p>
+          <h1 class="hero-title">Run local cricket like a pro.</h1>
+          <p class="hero-subtitle">
+            Organize fixtures, update every ball in real-time, manage tournaments, and discover nearby turfs from one fast interface.
+          </p>
+          <div class="hero-buttons">
+            <button class="btn-primary" data-page="host-match">Host a Match</button>
+            <button class="btn-secondary" data-page="book-turf">Book a Turf</button>
+          </div>
+          <div class="hero-metrics">
+            <article class="metric-chip">
+              <span id="liveMatchesCount">0</span>
+              <small>Live Matches</small>
+            </article>
+            <article class="metric-chip">
+              <span id="upcomingMatchesCount">0</span>
+              <small>Upcoming Matches</small>
+            </article>
+            <article class="metric-chip">
+              <span id="activeTournamentsCount">0</span>
+              <small>Active Tournaments</small>
+            </article>
+          </div>
+        </div>
+
+        <div class="hero-panels reveal">
+          <article class="hero-panel">
+            <h3>Live Score Control</h3>
+            <p>Update runs, wickets, and overs instantly with a ball-by-ball control panel.</p>
+          </article>
+          <article class="hero-panel">
+            <h3>Tournament Operations</h3>
+            <p>Publish schedules, track team participation, and keep standings visible.</p>
+          </article>
+          <article class="hero-panel">
+            <h3>Ground Discovery</h3>
+            <p>Browse local turf listings and move from planning to booking in minutes.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal">
+      <div class="container">
+        <div class="section-head">
+          <p class="section-tag">Live Center</p>
+          <h2 class="section-title">Recent Matches</h2>
+          <p class="section-description">Track upcoming and in-progress games, then jump into scoring instantly.</p>
+        </div>
+        <div id="liveMatchesGrid" class="matches-grid">
+          <p class="loading-text">Loading matches...</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="section reveal">
+      <div class="container">
+        <div class="section-head">
+          <p class="section-tag">Competitive Play</p>
+          <h2 class="section-title">Tournaments</h2>
+          <p class="section-description">Browse ongoing and upcoming events from local organizers.</p>
+        </div>
+        <div id="tournamentsGrid" class="tournaments-grid">
+          <p class="loading-text">Loading tournaments...</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <div id="host-match" class="page">
+    <div class="container page-shell">
+      <div class="section-head reveal">
+        <p class="section-tag">Organizer Tools</p>
+        <h2 class="section-title">Host a Match</h2>
+        <p class="section-description">Create teams, set overs, and publish a new fixture for live scoring.</p>
+      </div>
+
+      <div class="form-card reveal">
+        <h2 class="form-title">Create Match Setup</h2>
+        <form id="hostMatchForm">
+          <div class="form-group">
+            <label>Match Name</label>
+            <input type="text" id="matchName" placeholder="e.g., Mumbai vs Delhi" required />
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Match Type</label>
+              <select id="matchType">
+                <option value="T20">T20 (20 Overs)</option>
+                <option value="ODI">ODI (50 Overs)</option>
+                <option value="Test">Test Match</option>
+                <option value="Custom">Custom</option>
+              </select>
+            </div>
+            <div class="form-group" id="customOversGroup" style="display: none">
+              <label>Custom Overs</label>
+              <input type="number" id="customOvers" placeholder="e.g., 10" min="1" />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Team A Name</label>
+              <input type="text" id="teamAName" placeholder="Team A" required />
+            </div>
+            <div class="form-group">
+              <label>Team B Name</label>
+              <input type="text" id="teamBName" placeholder="Team B" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Team A Players (comma-separated)</label>
+            <input type="text" id="teamAPlayers" placeholder="Virat|virat@email.com, Rahul, Player3" />
+            <small class="input-help">Use <strong>Name|email</strong> to link a registered account, or just name for guest player.</small>
+          </div>
+
+          <div class="form-group">
+            <label>Team B Players (comma-separated)</label>
+            <input type="text" id="teamBPlayers" placeholder="Rohit|rohit@email.com, Surya, Player3" />
+            <small class="input-help">Linked accounts will be eligible for automatic match stat updates.</small>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Venue</label>
+              <input type="text" id="venue" placeholder="e.g., Wankhede Stadium" required />
+            </div>
+            <div class="form-group">
+              <label>Match Date</label>
+              <input type="date" id="matchDate" required />
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Tournament (Optional)</label>
+            <select id="tournamentSelect">
+              <option value="">Not part of tournament</option>
+            </select>
+          </div>
+
+          <button type="submit" class="submit-btn">Create Match</button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <div id="tournaments" class="page">
+    <div class="container page-shell">
+      <div class="section-head reveal">
+        <p class="section-tag">Competitive Ecosystem</p>
+        <h2 class="section-title">Tournaments</h2>
+        <p class="section-description">Follow event progression and publish new tournament brackets.</p>
+      </div>
+
+      <div class="action-row reveal">
+        <button id="createTournamentBtn" class="submit-btn">Create New Tournament</button>
+      </div>
+
+      <div id="tournamentsList"></div>
+      <div id="createTournamentForm" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div id="my-matches" class="page">
+    <div class="container page-shell">
+      <div class="section-head reveal">
+        <p class="section-tag">Personal Dashboard</p>
+        <h2 class="section-title">My Matches</h2>
+        <p class="section-description">See matches you created or joined with your linked player account.</p>
+      </div>
+      <div id="myMatchesGrid" class="matches-grid reveal">
+        <p class="loading-text">Loading your matches...</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="players" class="page">
+    <div class="container page-shell">
+      <div class="section-head reveal">
+        <p class="section-tag">Player Discovery</p>
+        <h2 class="section-title">Search Players</h2>
+        <p class="section-description">Find local cricketers by name and review quick career stats.</p>
+      </div>
+
+      <form id="playersSearchForm" class="players-search reveal">
+        <input type="text" id="playersSearchInput" placeholder="Search by player name..." />
+        <button type="submit" id="playersSearchBtn" class="submit-btn">Search</button>
+      </form>
+
+      <div id="playersResults" class="players-grid reveal">
+        <p class="loading-text">Loading players...</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="my-stats" class="page">
+    <div class="container page-shell">
+      <div class="section-head reveal">
+        <p class="section-tag">Player Profile</p>
+        <h2 class="section-title">My Stats</h2>
+        <p class="section-description">View account details and quick performance indicators.</p>
+      </div>
+
+      <div id="profile-section" class="profile-card reveal">
+        <p class="placeholder-text">Loading profile...</p>
+      </div>
+
+      <div class="stats-grid reveal">
+        <div class="stat-card">
+          <h4>Matches Played</h4>
+          <p id="statMatchesPlayed">0</p>
+        </div>
+        <div class="stat-card">
+          <h4>Win Rate</h4>
+          <p id="statWinRate">0%</p>
+        </div>
+        <div class="stat-card">
+          <h4>Followers</h4>
+          <p id="statFollowers">0</p>
+        </div>
+        <div class="stat-card">
+          <h4>Wins</h4>
+          <p id="statWins">0</p>
+        </div>
+        <div class="stat-card">
+          <h4>Losses</h4>
+          <p id="statLosses">0</p>
+        </div>
+        <div class="stat-card">
+          <h4>Runs</h4>
+          <p id="statRuns">0</p>
+        </div>
+        <div class="stat-card">
+          <h4>Wickets</h4>
+          <p id="statWickets">0</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="book-turf" class="page">
+    <div class="container page-shell">
+      <div class="section-head reveal">
+        <p class="section-tag">Ground Booking</p>
+        <h2 class="section-title">Book Turf</h2>
+        <p class="section-description">Find available grounds by location, pricing, and sports support.</p>
+      </div>
+
+      <div id="turfs-container">
+        <p class="loading-text">Loading turfs...</p>
+      </div>
+    </div>
+  </div>
+
+  <div id="login" class="page">
+    <div class="container page-shell">
+      <div class="form-card auth-card reveal">
+        <h2 class="form-title">Login to CricZone</h2>
+        <form id="loginForm">
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="loginEmail" placeholder="Enter your email" required />
+          </div>
+
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="loginPassword" placeholder="Enter your password" required />
+          </div>
+
+          <button type="submit" class="submit-btn">Login</button>
+        </form>
+        <p class="auth-switch">
+          Do not have an account? <a href="#" data-page="signup">Sign Up</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div id="signup" class="page">
+    <div class="container page-shell">
+      <div class="form-card auth-card reveal">
+        <h2 class="form-title">Create CricZone Account</h2>
+        <form id="signupForm">
+          <div class="form-group">
+            <label>Name</label>
+            <input type="text" id="signupName" placeholder="Enter your name" required />
+          </div>
+
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" id="signupEmail" placeholder="Enter your email" required />
+          </div>
+
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" id="signupPhone" placeholder="Enter your phone number" required />
+          </div>
+
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="signupPassword" placeholder="Create a password (min 6 characters)" required />
+          </div>
+
+          <button type="submit" class="submit-btn">Sign Up</button>
+        </form>
+        <p class="auth-switch">
+          Already have an account? <a href="#" data-page="login">Login</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div id="ball-scoring" class="page">
+    <div class="container page-shell">
+      <div class="scoring-header">
+        <button id="backToHome" class="back-btn">Back</button>
+        <h2 id="scoringMatchName">Match Name</h2>
+      </div>
+
+      <div class="score-display">
+        <div class="team-score">
+          <h3 id="teamBattingName">Team A</h3>
+          <div class="big-score">
+            <span id="currentRuns">0</span>/<span id="currentWickets">0</span>
+          </div>
+          <p>Overs: <span id="currentOvers">0.0</span></p>
+          <p>Run Rate: <span id="currentRunRate">0.00</span></p>
+        </div>
+      </div>
+
+      <div class="batsmen-display">
+        <div class="batsman">
+          <div class="player-line">
+            <p><strong>Striker:</strong> <span id="strikerName">-</span></p>
+            <button id="changeStrikerBtn" class="change-player-btn">Swap</button>
+          </div>
+          <p><span id="strikerRuns">0</span> (<span id="strikerBalls">0</span>)</p>
+        </div>
+        <div class="batsman">
+          <div class="player-line">
+            <p><strong>Non-Striker:</strong> <span id="nonStrikerName">-</span></p>
+            <button id="changeNonStrikerBtn" class="change-player-btn">Swap</button>
+          </div>
+          <p><span id="nonStrikerRuns">0</span> (<span id="nonStrikerBalls">0</span>)</p>
+        </div>
+        <button id="swapBatsmenBtn" class="swap-batsmen-btn">Swap Batsmen</button>
+      </div>
+
+      <div class="bowler-display">
+        <div class="player-line">
+          <p><strong>Bowler:</strong> <span id="bowlerName">-</span></p>
+          <button id="changeBowlerBtn" class="change-player-btn">Swap</button>
+        </div>
+        <p><span id="bowlerOvers">0.0</span> overs, <span id="bowlerRuns">0</span> runs, <span id="bowlerWickets">0</span> wickets</p>
+      </div>
+
+      <div class="lineup-hints">
+        <p id="battingSquadHint">Batting options: not loaded</p>
+        <p id="bowlingSquadHint">Bowling options: not loaded</p>
+      </div>
+
+      <div class="match-meta">
+        <p id="tossInfo">Toss: not set</p>
+        <p id="inningsInfo">Innings: 1st</p>
+        <p id="targetInfo">Target: N/A</p>
+      </div>
+
+      <div class="over-display">
+        <p>Current Over:</p>
+        <div id="overBalls" class="over-balls"></div>
+      </div>
+
+      <div class="detailed-scoreboard">
+        <div class="scoreboard-panel">
+          <h3>Batting</h3>
+          <div class="table-wrap">
+            <table class="score-table">
+              <thead>
+                <tr>
+                  <th>Batsman</th>
+                  <th>R</th>
+                  <th>B</th>
+                  <th>4s</th>
+                  <th>6s</th>
+                  <th>SR</th>
+                  <th>Dismissal</th>
+                </tr>
+              </thead>
+              <tbody id="batsmanStatsBody">
+                <tr><td colspan="7">No batting data yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="scoreboard-panel">
+          <h3>Bowling</h3>
+          <div class="table-wrap">
+            <table class="score-table">
+              <thead>
+                <tr>
+                  <th>Bowler</th>
+                  <th>O</th>
+                  <th>R</th>
+                  <th>W</th>
+                  <th>Eco</th>
+                  <th>WD</th>
+                  <th>NB</th>
+                </tr>
+              </thead>
+              <tbody id="bowlerStatsBody">
+                <tr><td colspan="7">No bowling data yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="scoreboard-panel">
+          <h3>Fall of Wickets</h3>
+          <ul id="fallOfWicketsList" class="fow-list">
+            <li>No wickets yet.</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="scoring-pad">
+        <h3>Record Ball</h3>
+
+        <div class="runs-buttons">
+          <button class="run-btn" data-runs="0">0</button>
+          <button class="run-btn" data-runs="1">1</button>
+          <button class="run-btn" data-runs="2">2</button>
+          <button class="run-btn" data-runs="3">3</button>
+          <button class="run-btn four-btn" data-runs="4">4</button>
+          <button class="run-btn six-btn" data-runs="6">6</button>
+        </div>
+
+        <div class="extras-buttons">
+          <button class="extra-btn" data-extra="wd">WD (Wide)</button>
+          <button class="extra-btn" data-extra="nb">NB (No Ball)</button>
+          <button class="extra-btn" data-extra="bye">BYE</button>
+          <button class="extra-btn" data-extra="lb">LB (Leg Bye)</button>
+        </div>
+
+        <div class="wicket-buttons">
+          <button id="wicketBtn" class="wicket-btn">OUT</button>
+          <button id="undoBtn" class="undo-btn">UNDO</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="site-footer">
+    <p>Built for local cricket communities. <span id="footerYear"></span></p>
+  </footer>
+
+  <script src="runtime-config.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>

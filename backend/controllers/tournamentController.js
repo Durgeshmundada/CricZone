@@ -1,110 +1,813 @@
 // backend/controllers/tournamentController.js
 const Tournament = require("../models/Tournament");
+const isProduction = process.env.NODE_ENV === "production";
+
+const sendServerError = (res, message, error) => {
+  console.error(`${message}:`, error);
+  return res.status(500).json({
+    success: false,
+    message,
+    ...(isProduction ? {} : { error: error.message })
+  });
+};
+
+const parseOversToDecimal = (rawOvers) => {
+  if (rawOvers === undefined || rawOvers === null) return 0;
+
+  if (typeof rawOvers === "number" && Number.isFinite(rawOvers)) {
+    const overs = Math.trunc(rawOvers);
+    const balls = Math.round((rawOvers - overs) * 10);
+    if (balls >= 0 && balls < 6) {
+      return overs + (balls / 6);
+    }
+    return rawOvers;
+  }
+
+  const raw = String(rawOvers).trim();
+  if (!raw) return 0;
+
+  const [oversPart, ballsPart = "0"] = raw.split(".");
+  const overs = parseInt(oversPart, 10);
+  const balls = parseInt(ballsPart, 10);
+  if (!Number.isFinite(overs) || !Number.isFinite(balls) || balls < 0 || balls > 5) {
+    return 0;
+  }
+
+  return overs + (balls / 6);
+};
+
+// ========== BASIC CRUD OPERATIONS ==========
 
 // Create new tournament
 exports.createTournament = async (req, res) => {
   try {
-    const { name, description, startDate, endDate, venue, format, maxTeams, prizePool } = req.body;
+    const { 
+      name, 
+      description, 
+      shortName,
+      startDate, 
+      endDate, 
+      registrationDeadline,
+      venue,
+      venues, 
+      format, 
+      customOvers,
+      tournamentType,
+      maxTeams,
+      minPlayers,
+      maxPlayers,
+      prizePool,
+      pointsSystem,
+      rules
+    } = req.body;
 
+    // Validation
     if (!name || !startDate || !endDate || !venue) {
-      return res.status(400).json({ message: "Please provide all required fields" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Please provide all required fields (name, startDate, endDate, venue)" 
+      });
     }
+
+    // Date validation
+    if (new Date(startDate) >= new Date(endDate)) {
+      return res.status(400).json({ 
+        success: false,
+        message: "End date must be after start date" 
+      });
+    }
+
+    if (format === "Custom") {
+      const oversValue = Number(customOvers);
+      if (!Number.isFinite(oversValue) || oversValue < 1 || oversValue > 50) {
+        return res.status(400).json({
+          success: false,
+          message: "customOvers must be between 1 and 50 for custom format"
+        });
+      }
+    }
+
+    const normalizedPrizePool = typeof prizePool === "string"
+      ? {
+          total: prizePool,
+          winner: "",
+          runnerUp: "",
+          playerOfTournament: "",
+          currency: "INR"
+        }
+      : prizePool;
+
+    // Initialize standings array
+    const standings = [];
 
     const tournament = await Tournament.create({
       name,
       description,
+      shortName: shortName || name.substring(0, 10).toUpperCase(),
       startDate,
       endDate,
+      registrationDeadline: registrationDeadline || startDate,
       venue,
-      format,
-      maxTeams,
-      prizePool,
-      createdBy: req.user._id
+      venues: venues || [{ name: venue, location: venue }],
+      format: format || "T20",
+      customOvers,
+      tournamentType: tournamentType || "league_knockout",
+      maxTeams: maxTeams || 8,
+      minPlayers: minPlayers || 11,
+      maxPlayers: maxPlayers || 15,
+      prizePool: normalizedPrizePool,
+      pointsSystem,
+      rules,
+      standings,
+      createdBy: req.user._id,
+      status: "registration_open"
     });
 
     res.status(201).json({
-      message: "Tournament created successfully ✅",
+      success: true,
+      message: "Tournament created successfully",
       tournament
     });
   } catch (error) {
-    console.error("❌ Tournament creation error:", error);
-    res.status(500).json({ message: "Failed to create tournament", error: error.message });
+    return sendServerError(res, "Failed to create tournament", error);
   }
 };
 
 // Get all tournaments
 exports.getAllTournaments = async (req, res) => {
   try {
-    const tournaments = await Tournament.find()
+    const { status, type, upcoming } = req.query;
+    
+    // Build filter
+    const filter = {};
+    if (status) filter.status = status;
+    if (type) filter.tournamentType = type;
+    if (upcoming === 'true') {
+      filter.startDate = { $gte: new Date() };
+      filter.status = { $in: ['upcoming', 'registration_open', 'registration_closed'] };
+    }
+
+    const tournaments = await Tournament.find(filter)
       .populate("createdBy", "name email")
-      .sort({ createdAt: -1 });
+      .populate({
+        path: "matches",
+        select: "matchName status matchDate teamA.name teamB.name winner",
+        options: { limit: 5, sort: { matchDate: -1 } }
+      })
+      .sort({ startDate: -1 });
 
     res.json({
+      success: true,
       count: tournaments.length,
       tournaments
     });
   } catch (error) {
-    console.error("❌ Error fetching tournaments:", error);
-    res.status(500).json({ message: "Failed to fetch tournaments" });
+    return sendServerError(res, "Failed to fetch tournaments", error);
   }
 };
 
-// Get single tournament
+// Get active/live tournaments
+exports.getActiveTournaments = async (req, res) => {
+  try {
+    const tournaments = await Tournament.getActiveTournaments();
+    
+    res.json({
+      success: true,
+      count: tournaments.length,
+      tournaments
+    });
+  } catch (error) {
+    return sendServerError(res, "Failed to fetch active tournaments", error);
+  }
+};
+
+// Get single tournament with full details
 exports.getTournament = async (req, res) => {
   try {
     const tournament = await Tournament.findById(req.params.id)
       .populate("createdBy", "name email")
-      .populate("matches");
+      .populate({
+        path: "matches",
+        populate: {
+          path: "createdBy",
+          select: "name"
+        }
+      })
+      .populate("registeredTeams.teamId")
+      .populate("registeredTeams.players.playerId", "name email");
 
     if (!tournament) {
-      return res.status(404).json({ message: "Tournament not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "Tournament not found" 
+      });
     }
 
-    res.json(tournament);
+    res.json({
+      success: true,
+      tournament
+    });
   } catch (error) {
-    console.error("❌ Error fetching tournament:", error);
-    res.status(500).json({ message: "Failed to fetch tournament" });
+    return sendServerError(res, "Failed to fetch tournament", error);
   }
 };
+
+// ========== TEAM REGISTRATION ==========
 
 // Register team in tournament
 exports.registerTeam = async (req, res) => {
   try {
-    const { teamName, captain, players } = req.body;
+    const { 
+      teamId,
+      teamName, 
+      captain, 
+      viceCaptain,
+      wicketkeeper,
+      coach,
+      players,
+      group 
+    } = req.body;
     const tournamentId = req.params.id;
+
+    // Validation
+    if (!teamName || !captain || !Array.isArray(players) || players.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Please provide team name, captain, and players" 
+      });
+    }
 
     const tournament = await Tournament.findById(tournamentId);
     if (!tournament) {
-      return res.status(404).json({ message: "Tournament not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "Tournament not found" 
+      });
     }
 
+    // Check registration status
+    if (tournament.status === 'registration_closed' || tournament.status === 'ongoing' || tournament.status === 'completed') {
+      return res.status(400).json({ 
+        success: false,
+        message: "Registration is closed for this tournament" 
+      });
+    }
+
+    // Check if tournament is full
     if (tournament.registeredTeams.length >= tournament.maxTeams) {
-      return res.status(400).json({ message: "Tournament is full" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Tournament is full. Maximum teams reached." 
+      });
     }
 
-    const teamExists = tournament.registeredTeams.some(t => t.teamName === teamName);
+    // Check if team name already exists
+    const teamExists = tournament.registeredTeams.some(
+      t => t.teamName.toLowerCase() === teamName.toLowerCase()
+    );
     if (teamExists) {
-      return res.status(400).json({ message: "Team name already registered" });
+      return res.status(400).json({ 
+        success: false,
+        message: "Team name already registered in this tournament" 
+      });
     }
 
+    if (teamId) {
+      const duplicateTeamId = tournament.registeredTeams.some(
+        (team) => team.teamId && team.teamId.toString() === String(teamId)
+      );
+      if (duplicateTeamId) {
+        return res.status(400).json({
+          success: false,
+          message: "This team is already registered in the tournament"
+        });
+      }
+    }
+
+    // Validate player count
+    if (players.length < tournament.minPlayers || players.length > tournament.maxPlayers) {
+      return res.status(400).json({ 
+        success: false,
+        message: `Team must have between ${tournament.minPlayers} and ${tournament.maxPlayers} players` 
+      });
+    }
+
+    // Add team to tournament
     tournament.registeredTeams.push({
+      teamId,
       teamName,
       captain,
+      viceCaptain,
+      wicketkeeper,
+      coach,
       players,
-      registeredBy: req.user._id
+      group,
+      registeredBy: req.user._id,
+      stats: {
+        played: 0,
+        won: 0,
+        lost: 0,
+        tied: 0,
+        noResult: 0,
+        points: 0,
+        netRunRate: 0.0
+      }
+    });
+
+    // Add to standings
+    tournament.standings.push({
+      teamName,
+      teamId,
+      position: tournament.standings.length + 1,
+      played: 0,
+      won: 0,
+      lost: 0,
+      tied: 0,
+      noResult: 0,
+      points: 0,
+      netRunRate: 0.0,
+      runsScored: 0,
+      oversPlayed: 0,
+      runsConceded: 0,
+      oversBowled: 0,
+      form: [],
+      group
     });
 
     await tournament.save();
 
     res.json({
-      message: "Team registered successfully ✅",
+      success: true,
+      message: "Team registered successfully",
       tournament
     });
   } catch (error) {
-    console.error("❌ Team registration error:", error);
-    res.status(500).json({ message: "Failed to register team" });
+    return sendServerError(res, "Failed to register team", error);
   }
 };
+
+// Unregister team from tournament
+exports.unregisterTeam = async (req, res) => {
+  try {
+    const { teamName, teamId } = req.body;
+    const tournamentId = req.params.id;
+
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Tournament not found" 
+      });
+    }
+
+    // Check if tournament has started
+    if (tournament.status === 'ongoing' || tournament.status === 'completed') {
+      return res.status(400).json({ 
+        success: false,
+        message: "Cannot unregister after tournament has started" 
+      });
+    }
+
+    const byTeamId = (team) => teamId && team.teamId && String(team.teamId) === String(teamId);
+    const byTeamName = (team) =>
+      teamName && String(team.teamName).toLowerCase() === String(teamName).toLowerCase();
+    const matchesTeam = (team) => Boolean(byTeamId(team) || byTeamName(team));
+
+    const wasRegistered = tournament.registeredTeams.some(matchesTeam);
+    if (!wasRegistered) {
+      return res.status(404).json({
+        success: false,
+        message: "Team not registered in this tournament"
+      });
+    }
+
+    tournament.registeredTeams = tournament.registeredTeams.filter((team) => !matchesTeam(team));
+    tournament.standings = tournament.standings.filter((standing) => !matchesTeam(standing));
+
+    await tournament.save();
+
+    res.json({
+      success: true,
+      message: "Team unregistered successfully",
+      tournament
+    });
+  } catch (error) {
+    return sendServerError(res, "Failed to unregister team", error);
+  }
+};
+
+// ========== FIXTURE GENERATION ==========
+
+// Generate league fixtures (Round-robin algorithm)
+exports.generateFixtures = async (req, res) => {
+  try {
+    const tournamentId = req.params.id;
+    const tournament = await Tournament.findById(tournamentId);
+
+    if (!tournament) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Tournament not found" 
+      });
+    }
+
+    // Check authorization
+    if (tournament.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ 
+        success: false,
+        message: "Not authorized to generate fixtures" 
+      });
+    }
+
+    const teams = tournament.registeredTeams.map(t => t.teamName);
+    
+    if (teams.length < 2) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Need at least 2 teams to generate fixtures" 
+      });
+    }
+
+    let fixtures = [];
+
+    if (tournament.tournamentType === 'league' || tournament.tournamentType === 'league_knockout') {
+      // Round-robin algorithm (Circle method)
+      fixtures = generateRoundRobinFixtures(teams, tournament.venues || [{ name: tournament.venue }]);
+    } else if (tournament.tournamentType === 'knockout') {
+      // Single elimination bracket
+      fixtures = generateKnockoutFixtures(teams, tournament.venues || [{ name: tournament.venue }]);
+    } else if (tournament.tournamentType === 'group_stage') {
+      // Group-wise round-robin
+      fixtures = generateGroupStageFixtures(tournament);
+    }
+
+    // Assign dates to fixtures
+    const startDate = new Date(tournament.startDate);
+    fixtures.forEach((fixture, index) => {
+      const dayOffset = Math.floor(index / 2); // 2 matches per day
+      const matchDate = new Date(startDate);
+      matchDate.setDate(startDate.getDate() + dayOffset);
+      fixture.date = matchDate;
+      fixture.time = index % 2 === 0 ? "14:00" : "19:00"; // Afternoon and evening slots
+    });
+
+    tournament.schedule = fixtures;
+    tournament.status = "registration_closed";
+    await tournament.save();
+
+    res.json({
+      success: true,
+      message: `${fixtures.length} fixtures generated successfully`,
+      fixtures: tournament.schedule
+    });
+  } catch (error) {
+    return sendServerError(res, "Failed to generate fixtures", error);
+  }
+};
+
+// Helper: Round-robin fixture generation (Circle method)
+function generateRoundRobinFixtures(teams, venues) {
+  const fixtures = [];
+  const teamsCopy = [...teams];
+  let matchNumber = 1;
+
+  // If odd number of teams, add a "BYE"
+  if (teamsCopy.length % 2 !== 0) {
+    teamsCopy.push("BYE");
+  }
+
+  const numRounds = teamsCopy.length - 1;
+  const halfSize = teamsCopy.length / 2;
+
+  for (let round = 0; round < numRounds; round++) {
+    for (let i = 0; i < halfSize; i++) {
+      const team1 = teamsCopy[i];
+      const team2 = teamsCopy[teamsCopy.length - 1 - i];
+
+      // Skip if either team is BYE
+      if (team1 !== "BYE" && team2 !== "BYE") {
+        fixtures.push({
+          round: `Round ${round + 1}`,
+          matchNumber: matchNumber++,
+          teamA: team1,
+          teamB: team2,
+          venue: venues[Math.floor(Math.random() * venues.length)].name,
+          status: 'scheduled'
+        });
+      }
+    }
+
+    // Rotate teams (keep first team fixed, rotate others)
+    teamsCopy.splice(1, 0, teamsCopy.pop());
+  }
+
+  return fixtures;
+}
+
+// Helper: Knockout bracket generation
+function generateKnockoutFixtures(teams, venues) {
+  const fixtures = [];
+  let matchNumber = 1;
+  const numTeams = teams.length;
+
+  // Round 1 (or Quarter-finals, etc.)
+  for (let i = 0; i < numTeams; i += 2) {
+    if (i + 1 < numTeams) {
+      fixtures.push({
+        round: `Round 1`,
+        matchNumber: matchNumber++,
+        teamA: teams[i],
+        teamB: teams[i + 1],
+        venue: venues[Math.floor(Math.random() * venues.length)].name,
+        status: 'scheduled'
+      });
+    }
+  }
+
+  return fixtures;
+}
+
+// Helper: Group stage fixtures
+function generateGroupStageFixtures(tournament) {
+  const fixtures = [];
+  let matchNumber = 1;
+
+  tournament.groups.forEach(group => {
+    const groupFixtures = generateRoundRobinFixtures(group.teams, tournament.venues || [{ name: tournament.venue }]);
+    groupFixtures.forEach(fixture => {
+      fixture.matchNumber = matchNumber++;
+      fixture.round = `Group ${group.name} - ${fixture.round}`;
+      fixtures.push(fixture);
+    });
+  });
+
+  return fixtures;
+}
+
+// ========== STANDINGS & POINTS TABLE ==========
+
+// Get tournament standings/points table
+exports.getStandings = async (req, res) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+
+    if (!tournament) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Tournament not found" 
+      });
+    }
+
+    // Sort standings by points, then NRR
+    const sortedStandings = tournament.standings.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return b.netRunRate - a.netRunRate;
+    });
+
+    // Update positions
+    sortedStandings.forEach((team, index) => {
+      team.position = index + 1;
+    });
+
+    res.json({
+      success: true,
+      standings: sortedStandings
+    });
+  } catch (error) {
+    return sendServerError(res, "Failed to fetch standings", error);
+  }
+};
+
+// Update standings after a match (called by matchController)
+exports.updateStandings = async (req, res) => {
+  try {
+    const { 
+      tournamentId,
+      teamA, 
+      teamB, 
+      winner,
+      teamAScore,
+      teamBScore,
+      teamAOvers,
+      teamBOvers,
+      resultType 
+    } = req.body;
+
+    const tournament = await Tournament.findById(tournamentId);
+    if (!tournament) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Tournament not found" 
+      });
+    }
+
+    // Find teams in standings
+    let teamAStanding = tournament.standings.find(s => s.teamName === teamA);
+    let teamBStanding = tournament.standings.find(s => s.teamName === teamB);
+
+    if (!teamAStanding || !teamBStanding) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Teams not found in standings" 
+      });
+    }
+
+    // Update match statistics
+    teamAStanding.played++;
+    teamBStanding.played++;
+
+    const normalizedTeamAScore = Number(teamAScore) || 0;
+    const normalizedTeamBScore = Number(teamBScore) || 0;
+    const normalizedTeamAOvers = parseOversToDecimal(teamAOvers);
+    const normalizedTeamBOvers = parseOversToDecimal(teamBOvers);
+    const pointsSystem = {
+      win: Number(tournament.pointsSystem?.win ?? 2),
+      loss: Number(tournament.pointsSystem?.loss ?? 0),
+      tie: Number(tournament.pointsSystem?.tie ?? 1),
+      noResult: Number(tournament.pointsSystem?.noResult ?? 1)
+    };
+
+    // Update runs and overs for NRR calculation
+    teamAStanding.runsScored += normalizedTeamAScore;
+    teamAStanding.oversPlayed += normalizedTeamAOvers;
+    teamAStanding.runsConceded += normalizedTeamBScore;
+    teamAStanding.oversBowled += normalizedTeamBOvers;
+
+    teamBStanding.runsScored += normalizedTeamBScore;
+    teamBStanding.oversPlayed += normalizedTeamBOvers;
+    teamBStanding.runsConceded += normalizedTeamAScore;
+    teamBStanding.oversBowled += normalizedTeamAOvers;
+
+    // Update wins/losses/ties
+    if (resultType === 'tie') {
+      teamAStanding.tied++;
+      teamBStanding.tied++;
+      teamAStanding.points += pointsSystem.tie;
+      teamBStanding.points += pointsSystem.tie;
+      teamAStanding.form.push('T');
+      teamBStanding.form.push('T');
+    } else if (resultType === 'no_result') {
+      teamAStanding.noResult++;
+      teamBStanding.noResult++;
+      teamAStanding.points += pointsSystem.noResult;
+      teamBStanding.points += pointsSystem.noResult;
+      teamAStanding.form.push('NR');
+      teamBStanding.form.push('NR');
+    } else if (winner === teamA) {
+      teamAStanding.won++;
+      teamBStanding.lost++;
+      teamAStanding.points += pointsSystem.win;
+      teamBStanding.points += pointsSystem.loss;
+      teamAStanding.form.push('W');
+      teamBStanding.form.push('L');
+    } else if (winner === teamB) {
+      teamBStanding.won++;
+      teamAStanding.lost++;
+      teamBStanding.points += pointsSystem.win;
+      teamAStanding.points += pointsSystem.loss;
+      teamBStanding.form.push('W');
+      teamAStanding.form.push('L');
+    }
+
+    // Keep only last 5 form results
+    if (teamAStanding.form.length > 5) teamAStanding.form.shift();
+    if (teamBStanding.form.length > 5) teamBStanding.form.shift();
+
+    // Calculate NRR
+    tournament.calculateNRR(teamAStanding);
+    tournament.calculateNRR(teamBStanding);
+
+    // Sort standings
+    tournament.standings.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return b.netRunRate - a.netRunRate;
+    });
+
+    // Update positions
+    tournament.standings.forEach((team, index) => {
+      team.position = index + 1;
+    });
+
+    // Update tournament statistics
+    tournament.statistics.completedMatches++;
+
+    await tournament.save();
+
+    res.json({
+      success: true,
+      message: "Standings updated successfully",
+      standings: tournament.standings
+    });
+  } catch (error) {
+    return sendServerError(res, "Failed to update standings", error);
+  }
+};
+
+// ========== PLAYOFF GENERATION (IPL Style) ==========
+
+// Generate playoff bracket
+exports.generatePlayoffs = async (req, res) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id);
+
+    if (!tournament) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Tournament not found" 
+      });
+    }
+
+    // Check authorization
+    if (tournament.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ 
+        success: false,
+        message: "Not authorized to generate playoffs" 
+      });
+    }
+
+    if (tournament.standings.length < 4) {
+      return res.status(400).json({ 
+        success: false,
+        message: "Need at least 4 teams for playoffs" 
+      });
+    }
+
+    // Sort standings to get top 4
+    const sortedStandings = tournament.standings.sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      return b.netRunRate - a.netRunRate;
+    });
+
+    const top4 = sortedStandings.slice(0, 4);
+
+    if (tournament.knockout.playoffFormat === 'ipl_style') {
+      // IPL Format: Qualifier 1, Eliminator, Qualifier 2, Final
+      tournament.knockout.qualifier1 = {
+        team1: top4[0].teamName,
+        team2: top4[1].teamName,
+        venue: tournament.venues[0]?.name || tournament.venue,
+        date: new Date(tournament.endDate.getTime() - 7 * 24 * 60 * 60 * 1000) // 7 days before end
+      };
+
+      tournament.knockout.eliminator = {
+        team1: top4[2].teamName,
+        team2: top4[3].teamName,
+        venue: tournament.venues[1]?.name || tournament.venue,
+        date: new Date(tournament.endDate.getTime() - 6 * 24 * 60 * 60 * 1000)
+      };
+
+      tournament.knockout.qualifier2 = {
+        team1: "TBD (Loser of Q1)",
+        team2: "TBD (Winner of Eliminator)",
+        venue: tournament.venues[0]?.name || tournament.venue,
+        date: new Date(tournament.endDate.getTime() - 4 * 24 * 60 * 60 * 1000)
+      };
+
+      tournament.knockout.final = {
+        team1: "TBD (Winner of Q1)",
+        team2: "TBD (Winner of Q2)",
+        venue: tournament.venue,
+        date: tournament.endDate
+      };
+    } else {
+      // Standard: Semi-Final 1, Semi-Final 2, Final
+      tournament.knockout.semiFinals = [
+        {
+          team1: top4[0].teamName,
+          team2: top4[3].teamName,
+          venue: tournament.venues[0]?.name || tournament.venue,
+          date: new Date(tournament.endDate.getTime() - 5 * 24 * 60 * 60 * 1000)
+        },
+        {
+          team1: top4[1].teamName,
+          team2: top4[2].teamName,
+          venue: tournament.venues[1]?.name || tournament.venue,
+          date: new Date(tournament.endDate.getTime() - 4 * 24 * 60 * 60 * 1000)
+        }
+      ];
+
+      tournament.knockout.final = {
+        team1: "TBD (Winner of SF1)",
+        team2: "TBD (Winner of SF2)",
+        venue: tournament.venue,
+        date: tournament.endDate
+      };
+    }
+
+    tournament.status = "playoffs";
+    await tournament.save();
+
+    res.json({
+      success: true,
+      message: "Playoff bracket generated successfully",
+      knockout: tournament.knockout
+    });
+  } catch (error) {
+    return sendServerError(res, "Failed to generate playoffs", error);
+  }
+};
+
+// ========== TOURNAMENT STATUS MANAGEMENT ==========
 
 // Update tournament status
 exports.updateTournamentStatus = async (req, res) => {
@@ -113,21 +816,51 @@ exports.updateTournamentStatus = async (req, res) => {
     const tournament = await Tournament.findById(req.params.id);
 
     if (!tournament) {
-      return res.status(404).json({ message: "Tournament not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "Tournament not found" 
+      });
+    }
+
+    // Check authorization
+    if (tournament.createdBy.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ 
+        success: false,
+        message: "Not authorized to update tournament status" 
+      });
+    }
+
+    const validStatuses = [
+      "upcoming",
+      "registration_open",
+      "registration_closed",
+      "ongoing",
+      "playoffs",
+      "completed",
+      "cancelled"
+    ];
+
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid tournament status"
+      });
     }
 
     tournament.status = status;
     await tournament.save();
 
     res.json({
+      success: true,
       message: "Tournament status updated",
       tournament
     });
   } catch (error) {
-    console.error("❌ Update tournament error:", error);
-    res.status(500).json({ message: "Failed to update tournament" });
+    return sendServerError(res, "Failed to update tournament", error);
   }
 };
+
+// ========== DELETE TOURNAMENT ==========
 
 // Delete tournament
 exports.deleteTournament = async (req, res) => {
@@ -135,18 +868,65 @@ exports.deleteTournament = async (req, res) => {
     const tournament = await Tournament.findById(req.params.id);
 
     if (!tournament) {
-      return res.status(404).json({ message: "Tournament not found" });
+      return res.status(404).json({ 
+        success: false,
+        message: "Tournament not found" 
+      });
     }
 
+    // Check authorization
     if (tournament.createdBy.toString() !== req.user._id.toString()) {
-      return res.status(403).json({ message: "Not authorized to delete this tournament" });
+      return res.status(403).json({ 
+        success: false,
+        message: "Not authorized to delete this tournament" 
+      });
     }
+
+    // Prevent deletion of ongoing/completed tournaments
+    if (tournament.status === 'ongoing' || tournament.status === 'playoffs') {
+      return res.status(400).json({ 
+        success: false,
+        message: "Cannot delete an ongoing tournament" 
+      });
+    }
+
+    // Delete associated matches (optional - you may want to keep them)
+    // await Match.deleteMany({ tournament: tournament._id });
 
     await tournament.deleteOne();
 
-    res.json({ message: "Tournament deleted successfully" });
+    res.json({ 
+      success: true,
+      message: "Tournament deleted successfully" 
+    });
   } catch (error) {
-    console.error("❌ Delete tournament error:", error);
-    res.status(500).json({ message: "Failed to delete tournament" });
+    return sendServerError(res, "Failed to delete tournament", error);
   }
 };
+
+// ========== TOURNAMENT STATISTICS ==========
+
+// Get tournament statistics
+exports.getTournamentStats = async (req, res) => {
+  try {
+    const tournament = await Tournament.findById(req.params.id)
+      .populate("matches");
+
+    if (!tournament) {
+      return res.status(404).json({ 
+        success: false,
+        message: "Tournament not found" 
+      });
+    }
+
+    res.json({
+      success: true,
+      statistics: tournament.statistics,
+      awards: tournament.awards
+    });
+  } catch (error) {
+    return sendServerError(res, "Failed to fetch tournament statistics", error);
+  }
+};
+
+

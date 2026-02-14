@@ -1,26 +1,24 @@
-// backend/routes/bookingRoutes.js
-
 const express = require("express");
 const {
   createBooking,
   getAllBookings,
   getUserBookings,
-  cancelBooking,
+  cancelBooking
 } = require("../controllers/bookingController");
 const { protect, admin } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// 🟢 Create a booking (User)
+// Create booking (authenticated user)
 router.post("/", protect, createBooking);
 
-// 🟢 Get user's own bookings
+// Get current user bookings
 router.get("/mybookings", protect, getUserBookings);
 
-// 🟢 Cancel a booking (User or Admin)
+// Cancel booking (owner or admin)
 router.put("/:id/cancel", protect, cancelBooking);
 
-// 🟢 Get all bookings (Admin only)
+// Get all bookings (admin only)
 router.get("/", protect, admin, getAllBookings);
 
 module.exports = router;
