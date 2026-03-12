@@ -1,72 +1,167 @@
-// backend/controllers/userController.js
-const User = require("../models/User");
-const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
+const jwt = require("jsonwebtoken");
+const User = require("../models/User");
+const { asyncHandler, createError, sendSuccess } = require("../utils/http");
+const { safeUser } = require("../utils/presenters");
 
-// Generate JWT Token
-const generateToken = (id) => {
-  return jwt.sign({ id }, process.env.JWT_SECRET || "defaultSecretKey", {
-    expiresIn: "7d",
+const validateEmail = (email) => /\S+@\S+\.\S+/.test(String(email || "").trim());
+
+const buildToken = (user) => {
+  if (!process.env.JWT_SECRET) {
+    throw createError(500, "JWT_SECRET is not configured");
+  }
+
+  return jwt.sign({ id: user._id.toString() }, process.env.JWT_SECRET, {
+    expiresIn: process.env.JWT_EXPIRE || "7d"
   });
 };
 
-// Register User
-const registerUser = async (req, res) => {
-  try {
-    const { name, email, phone, password, role } = req.body;
-
-    if (!name || !email || !phone || !password) {
-      return res.status(400).json({ message: "All fields are required" });
-    }
-
-    const userExists = await User.findOne({ email });
-    if (userExists) {
-      return res.status(400).json({ message: "User already exists" });
-    }
-
-    const user = await User.create({ name, email, phone, password, role });
-
-    res.status(201).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      token: generateToken(user._id),
-    });
-  } catch (error) {
-    console.error("❌ Registration error:", error);
-    res.status(500).json({ message: "Error registering user", error });
-  }
+const sendAuthPayload = (res, user, status, message) => {
+  const safe = safeUser(user);
+  return sendSuccess(
+    res,
+    {
+      message,
+      token: buildToken(user),
+      user: safe,
+      data: safe
+    },
+    status
+  );
 };
 
-// Login User
-const loginUser = async (req, res) => {
-  try {
-    const { email, password } = req.body;
+exports.register = asyncHandler(async (req, res) => {
+  const name = String(req.body.name || "").trim();
+  const email = String(req.body.email || "").trim().toLowerCase();
+  const password = String(req.body.password || "");
+  const phone = String(req.body.phone || "").trim();
 
-    if (!email || !password) {
-      return res.status(400).json({ message: "Email and password are required" });
-    }
-
-    const user = await User.findOne({ email }).select("+password");
-    if (!user) return res.status(401).json({ message: "Invalid credentials" });
-
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) return res.status(401).json({ message: "Invalid credentials" });
-
-    res.status(200).json({
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      token: generateToken(user._id),
-    });
-  } catch (error) {
-    console.error("❌ Login error:", error);
-    res.status(500).json({ message: "Error logging in", error });
+  if (!name || !email || !password) {
+    throw createError(400, "Name, email, and password are required");
   }
-};
 
-module.exports = { registerUser, loginUser };
+  if (!validateEmail(email)) {
+    throw createError(400, "Please provide a valid email address");
+  }
+
+  if (password.length < 8) {
+    throw createError(400, "Password must be at least 8 characters long");
+  }
+
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    throw createError(409, "Email already registered");
+  }
+
+  const user = await User.create({
+    name,
+    email,
+    phone,
+    password: await bcrypt.hash(password, 12),
+    profile: {
+      displayName: name
+    }
+  });
+
+  return sendAuthPayload(res, user, 201, "User registered successfully");
+});
+
+exports.login = asyncHandler(async (req, res) => {
+  const email = String(req.body.email || "").trim().toLowerCase();
+  const password = String(req.body.password || "");
+
+  if (!email || !password) {
+    throw createError(400, "Email and password are required");
+  }
+
+  const user = await User.findOne({ email }).select("+password");
+  if (!user) {
+    throw createError(401, "Invalid email or password");
+  }
+
+  const passwordMatches = await bcrypt.compare(password, user.password);
+  if (!passwordMatches) {
+    throw createError(401, "Invalid email or password");
+  }
+
+  user.password = undefined;
+  return sendAuthPayload(res, user, 200, "Login successful");
+});
+
+exports.getProfile = asyncHandler(async (req, res) => {
+  const safe = safeUser(req.user);
+  return sendSuccess(res, {
+    user: safe,
+    data: safe
+  });
+});
+
+exports.updateProfile = asyncHandler(async (req, res) => {
+  const updates = {};
+  const name = String(req.body.name || "").trim();
+  const phone = String(req.body.phone || "").trim();
+  const displayName = String(req.body.displayName || "").trim();
+  const playerType = String(req.body.playerType || "").trim();
+  const availabilityStatus = String(req.body.availabilityStatus || "").trim();
+
+  if (name) updates.name = name;
+  if (phone) updates.phone = phone;
+  if (displayName) updates["profile.displayName"] = displayName;
+  if (playerType) updates["profile.playerType"] = playerType;
+  if (availabilityStatus) updates["profile.availabilityStatus"] = availabilityStatus;
+
+  if (Object.keys(updates).length === 0) {
+    throw createError(400, "No profile fields provided");
+  }
+
+  const user = await User.findByIdAndUpdate(req.user._id, updates, {
+    new: true,
+    runValidators: true
+  });
+
+  const safe = safeUser(user);
+  return sendSuccess(res, {
+    message: "Profile updated",
+    user: safe,
+    data: safe
+  });
+});
+
+exports.getAllUsers = asyncHandler(async (_req, res) => {
+  const users = await User.find().sort({ createdAt: -1 }).limit(200);
+  return sendSuccess(res, {
+    data: users.map(safeUser)
+  });
+});
+
+exports.searchPlayers = asyncHandler(async (req, res) => {
+  const search = String(req.query.search || "").trim();
+  const query = search
+    ? {
+        $or: [
+          { name: { $regex: search, $options: "i" } },
+          { "profile.displayName": { $regex: search, $options: "i" } },
+          { email: { $regex: search, $options: "i" } }
+        ]
+      }
+    : {};
+
+  const users = await User.find(query)
+    .sort({ "stats.matchesPlayed": -1, name: 1 })
+    .limit(100);
+
+  return sendSuccess(res, {
+    data: users.map((user) => {
+      const safe = safeUser(user);
+      return {
+        _id: safe._id,
+        name: safe.name,
+        email: safe.email,
+        role: safe.role,
+        profile: safe.profile,
+        media: safe.media,
+        stats: safe.stats
+      };
+    })
+  });
+});

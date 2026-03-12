@@ -6,35 +6,70 @@ const bookingSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Turf",
       required: true,
+      index: true
     },
     user: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
+      index: true
     },
     date: {
-      type: String, // Example: "2025-10-28"
+      type: String,
       required: true,
+      index: true
     },
     startTime: {
-      type: String, // Example: "08:00 AM"
-      required: true,
+      type: String,
+      required: true
     },
     endTime: {
-      type: String, // Example: "09:00 AM"
-      required: true,
+      type: String,
+      required: true
+    },
+    startMinutes: {
+      type: Number,
+      required: true
+    },
+    endMinutes: {
+      type: Number,
+      required: true
     },
     totalPrice: {
       type: Number,
       required: true,
+      min: 0
     },
     status: {
       type: String,
       enum: ["booked", "cancelled"],
       default: "booked",
+      index: true
     },
+    billing: {
+      invoiceNumber: { type: String, required: true },
+      paymentStatus: {
+        type: String,
+        enum: ["pending", "paid", "refunded", "failed"],
+        default: "pending"
+      },
+      paymentMethod: {
+        type: String,
+        default: ""
+      },
+      paidAt: {
+        type: Date,
+        default: null
+      }
+    },
+    cancelledAt: {
+      type: Date,
+      default: null
+    }
   },
   { timestamps: true }
 );
+
+bookingSchema.index({ turf: 1, date: 1, startMinutes: 1, endMinutes: 1, status: 1 });
 
 module.exports = mongoose.model("Booking", bookingSchema);

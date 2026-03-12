@@ -1,13 +1,11 @@
 const express = require("express");
 const { addTurf, getAllTurfs } = require("../controllers/turfController");
-const { protect } = require("../middleware/authMiddleware");
+const { protect, adminOrTurfOwner } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// Only admin can add turfs
-router.post("/", protect, addTurf);
-
-// Anyone can view turfs
+router.post("/", protect, adminOrTurfOwner, addTurf);
 router.get("/", getAllTurfs);
+router.get("/all", getAllTurfs);
 
 module.exports = router;

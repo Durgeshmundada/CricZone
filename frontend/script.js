@@ -1,689 +1,1105 @@
-// script.js – Complete CricZone Frontend
-console.log("✅ CricZone script.js loaded");
+// Cricket Tournament Management System - Complete Script
+// ======================================================
 
-const API_BASE = "http://localhost:5000/api";
+// Global Variables
+const API_URL = 'http://localhost:5000/api';
+let currentUser = null;
+let tournaments = [];
+let matches = [];
+let teams = [];
+let players = [];
+let bookings = [];
+let turfs = [];
+let activeTab = 'tournaments';
 
-document.addEventListener("DOMContentLoaded", () => {
-  const pages = Array.from(document.querySelectorAll(".page"));
-  const navLinks = Array.from(document.querySelectorAll(".nav-link"));
-  const ctaButtons = Array.from(document.querySelectorAll("[data-page]"));
-  const navAuth = document.getElementById("navAuth");
-  const navUserEmail = document.getElementById("navUserEmail");
-  const navLoginLink = document.getElementById("navLogin");
-  const logoutBtn = document.getElementById("logoutBtn");
+// ==================== AUTHENTICATION ====================
 
-  // === PAGE NAVIGATION ===
-  function showPage(pageId) {
-    pages.forEach(p => p.style.display = p.id === pageId ? "block" : "none");
-    navLinks.forEach(l => l.classList.toggle("active", l.getAttribute("data-page") === pageId));
+async function login() {
+  const email = document.getElementById('login-email')?.value;
+  const password = document.getElementById('login-password')?.value;
 
-    // Load data based on page
-    if (pageId === "home") loadHomePage();
-    if (pageId === "book-turf") loadTurfs();
-    if (pageId === "my-stats") loadUserProfile();
-    if (pageId === "tournaments") loadTournaments();
-    if (pageId === "login" && isLoggedIn()) showPage("home");
+  if (!email || !password) {
+    showNotification('Please fill all fields', 'error');
+    return;
   }
 
-  showPage("home");
-
-  // Attach navigation
-  [...navLinks, ...ctaButtons].forEach(el => {
-    const page = el.getAttribute("data-page");
-    if (page) el.addEventListener("click", (e) => { e.preventDefault(); showPage(page); });
-  });
-
-  // === AUTH FUNCTIONS ===
-  function isLoggedIn() {
-    return !!localStorage.getItem("token");
-  }
-
-  function setUserFromStorage() {
-    const userJson = localStorage.getItem("user");
-    if (userJson) {
-      try {
-        const user = JSON.parse(userJson);
-        navUserEmail.textContent = user.email || user.name || "";
-        navAuth.style.display = "flex";
-        navLoginLink.style.display = "none";
-      } catch {
-        navUserEmail.textContent = "";
-      }
-    } else {
-      navAuth.style.display = "none";
-      navLoginLink.style.display = "inline-block";
-    }
-  }
-
-  setUserFromStorage();
-
-  logoutBtn?.addEventListener("click", () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("user");
-    setUserFromStorage();
-    showToast("Logged out", "info");
-    showPage("home");
-  });
-
-  // === LOGIN FORM ===
-  const loginForm = document.getElementById("loginForm");
-  loginForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = document.getElementById("loginEmail").value.trim();
-    const password = document.getElementById("loginPassword").value.trim();
-
-    if (!email || !password) return showToast("Please fill both fields", "error");
-
-    try {
-      const res = await fetch(`${API_BASE}/users/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password })
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        localStorage.setItem("token", data.token);
-        localStorage.setItem("user", JSON.stringify(data.user));
-        setUserFromStorage();
-        showToast("Login successful", "success");
-        setTimeout(() => showPage("home"), 700);
-      } else {
-        showToast(data.message || "Invalid credentials", "error");
-      }
-    } catch (err) {
-      console.error("Login error:", err);
-      showToast("Server error. Try later.", "error");
-    }
-  });
-
-  // === HOST MATCH FORM ===
-  const hostMatchForm = document.getElementById("hostMatchForm");
-  const matchTypeSelect = document.getElementById("matchType");
-  const customOversGroup = document.getElementById("customOversGroup");
-  const tournamentSelect = document.getElementById("tournamentSelect");
-
-  // Show/hide custom overs
-  matchTypeSelect?.addEventListener("change", () => {
-    customOversGroup.style.display = matchTypeSelect.value === "Custom" ? "block" : "none";
-  });
-
-  // Load tournaments into dropdown
-  async function loadTournamentOptions() {
-    try {
-      const res = await fetch(`${API_BASE}/tournaments`);
-      const data = await res.json();
-      if (res.ok && data.tournaments) {
-        tournamentSelect.innerHTML = '<option value="">Not part of tournament</option>';
-        data.tournaments.forEach(t => {
-          if (t.status === "upcoming" || t.status === "ongoing") {
-            tournamentSelect.innerHTML += `<option value="${t._id}">${escapeHtml(t.name)}</option>`;
-          }
-        });
-      }
-    } catch (err) {
-      console.error("Failed to load tournaments:", err);
-    }
-  }
-
-  loadTournamentOptions();
-
-  hostMatchForm?.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    
-    if (!isLoggedIn()) {
-      showToast("Please login to host a match", "error");
-      showPage("login");
-      return;
-    }
-
-    const matchData = {
-      matchName: document.getElementById("matchName").value.trim(),
-      matchType: document.getElementById("matchType").value,
-      customOvers: document.getElementById("customOvers")?.value || null,
-      teamAName: document.getElementById("teamAName").value.trim(),
-      teamAPlayers: document.getElementById("teamAPlayers").value.trim(),
-      teamBName: document.getElementById("teamBName").value.trim(),
-      teamBPlayers: document.getElementById("teamBPlayers").value.trim(),
-      venue: document.getElementById("venue").value.trim(),
-      matchDate: document.getElementById("matchDate").value,
-      tournamentId: document.getElementById("tournamentSelect").value || null
-    };
-
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/matches`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify(matchData)
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        showToast("Match created successfully! 🏏", "success");
-        hostMatchForm.reset();
-        setTimeout(() => showPage("home"), 1000);
-      } else {
-        showToast(data.message || "Failed to create match", "error");
-      }
-    } catch (err) {
-      console.error("Match creation error:", err);
-      showToast("Server error", "error");
-    }
-  });
-
-  // === HOME PAGE - Load Live Matches ===
-  async function loadHomePage() {
-    const liveMatchesGrid = document.getElementById("liveMatchesGrid");
-    const tournamentsGrid = document.getElementById("tournamentsGrid");
-
-    // Load live matches
-    try {
-      const res = await fetch(`${API_BASE}/matches/live`);
-      const data = await res.json();
-      
-      if (res.ok && data.matches && data.matches.length > 0) {
-        liveMatchesGrid.innerHTML = "";
-        data.matches.forEach(match => {
-          const card = document.createElement("div");
-          card.className = "match-card live";
-          card.innerHTML = `
-            <div class="match-header">
-              <span class="live-badge">🔴 LIVE</span>
-              <h3>${escapeHtml(match.matchName)}</h3>
-            </div>
-            <div class="match-score">
-              <div class="team">
-                <span class="team-name">${escapeHtml(match.teamA.name)}</span>
-                <span class="score">${match.teamA.score}/${match.teamA.wickets} (${match.teamA.overs})</span>
-              </div>
-              <div class="vs">vs</div>
-              <div class="team">
-                <span class="team-name">${escapeHtml(match.teamB.name)}</span>
-                <span class="score">${match.teamB.score}/${match.teamB.wickets} (${match.teamB.overs})</span>
-              </div>
-            </div>
-            <div class="match-footer">
-              <span>📍 ${escapeHtml(match.venue)}</span>
-            </div>
-          `;
-          liveMatchesGrid.appendChild(card);
-        });
-      } else {
-        liveMatchesGrid.innerHTML = '<p style="text-align:center;">No live matches at the moment.</p>';
-      }
-    } catch (err) {
-      console.error("Error loading live matches:", err);
-      liveMatchesGrid.innerHTML = '<p style="text-align:center;">Failed to load matches.</p>';
-    }
-
-    // Load ongoing tournaments
-    try {
-      const res = await fetch(`${API_BASE}/tournaments`);
-      const data = await res.json();
-      
-      if (res.ok && data.tournaments) {
-        const ongoing = data.tournaments.filter(t => t.status === "ongoing" || t.status === "upcoming");
-        
-        if (ongoing.length > 0) {
-          tournamentsGrid.innerHTML = "";
-          ongoing.slice(0, 3).forEach(tournament => {
-            const card = document.createElement("div");
-            card.className = "tournament-card";
-            card.innerHTML = `
-              <h3>🏆 ${escapeHtml(tournament.name)}</h3>
-              <p>📍 ${escapeHtml(tournament.venue)}</p>
-              <p>📅 ${new Date(tournament.startDate).toLocaleDateString()}</p>
-              <p>👥 ${tournament.registeredTeams.length}/${tournament.maxTeams} teams</p>
-              <span class="status-badge ${tournament.status}">${tournament.status.toUpperCase()}</span>
-            `;
-            tournamentsGrid.appendChild(card);
-          });
-        } else {
-          tournamentsGrid.innerHTML = '<p style="text-align:center;">Stay tuned for tournaments!</p>';
-        }
-      }
-    } catch (err) {
-      console.error("Error loading tournaments:", err);
-    }
-  }
-
-  // === TOURNAMENTS PAGE ===
-  async function loadTournaments() {
-    const tournamentsContainer = document.getElementById("tournaments").querySelector(".container");
-    
-    tournamentsContainer.innerHTML = `
-      <h2 class="section-title">🏆 Tournaments</h2>
-      <div style="text-align:center; margin-bottom:20px;">
-        <button id="createTournamentBtn" class="submit-btn" style="max-width:300px;">Create New Tournament</button>
-      </div>
-      <div id="tournamentsList"></div>
-      <div id="createTournamentForm" style="display:none;"></div>
-    `;
-
-    const createTournamentBtn = document.getElementById("createTournamentBtn");
-    const tournamentsList = document.getElementById("tournamentsList");
-    const createTournamentFormContainer = document.getElementById("createTournamentForm");
-
-    // Show create tournament form
-    createTournamentBtn?.addEventListener("click", () => {
-      if (!isLoggedIn()) {
-        showToast("Please login to create a tournament", "error");
-        showPage("login");
-        return;
-      }
-
-      createTournamentFormContainer.style.display = "block";
-      createTournamentFormContainer.innerHTML = `
-        <div class="form-card">
-          <h2 class="form-title">Create Tournament</h2>
-          <form id="newTournamentForm">
-            <div class="form-group">
-              <label>Tournament Name</label>
-              <input type="text" id="tournamentName" required />
-            </div>
-            <div class="form-group">
-              <label>Description</label>
-              <textarea id="tournamentDesc" rows="3"></textarea>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Start Date</label>
-                <input type="date" id="tournamentStartDate" required />
-              </div>
-              <div class="form-group">
-                <label>End Date</label>
-                <input type="date" id="tournamentEndDate" required />
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Venue</label>
-                <input type="text" id="tournamentVenue" required />
-              </div>
-              <div class="form-group">
-                <label>Format</label>
-                <select id="tournamentFormat">
-                  <option value="T20">T20</option>
-                  <option value="ODI">ODI</option>
-                  <option value="Test">Test</option>
-                  <option value="Custom">Custom</option>
-                </select>
-              </div>
-            </div>
-            <div class="form-row">
-              <div class="form-group">
-                <label>Max Teams</label>
-                <input type="number" id="tournamentMaxTeams" value="8" min="2" max="32" />
-              </div>
-              <div class="form-group">
-                <label>Prize Pool</label>
-                <input type="text" id="tournamentPrize" placeholder="e.g., ₹50,000" />
-              </div>
-            </div>
-            <button type="submit" class="submit-btn">Create Tournament</button>
-            <button type="button" id="cancelTournamentBtn" class="btn-logout" style="width:100%; margin-top:10px;">Cancel</button>
-          </form>
-        </div>
-      `;
-
-      document.getElementById("cancelTournamentBtn")?.addEventListener("click", () => {
-        createTournamentFormContainer.style.display = "none";
-      });
-
-      document.getElementById("newTournamentForm")?.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        
-        const tournamentData = {
-          name: document.getElementById("tournamentName").value.trim(),
-          description: document.getElementById("tournamentDesc").value.trim(),
-          startDate: document.getElementById("tournamentStartDate").value,
-          endDate: document.getElementById("tournamentEndDate").value,
-          venue: document.getElementById("tournamentVenue").value.trim(),
-          format: document.getElementById("tournamentFormat").value,
-          maxTeams: parseInt(document.getElementById("tournamentMaxTeams").value),
-          prizePool: document.getElementById("tournamentPrize").value.trim() || "TBD"
-        };
-
-        try {
-          const token = localStorage.getItem("token");
-          const res = await fetch(`${API_BASE}/tournaments`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "Authorization": `Bearer ${token}`
-            },
-            body: JSON.stringify(tournamentData)
-          });
-
-          const data = await res.json();
-
-          if (res.ok) {
-            showToast("Tournament created successfully! 🏆", "success");
-            createTournamentFormContainer.style.display = "none";
-            loadTournaments();
-          } else {
-            showToast(data.message || "Failed to create tournament", "error");
-          }
-        } catch (err) {
-          console.error("Tournament creation error:", err);
-          showToast("Server error", "error");
-        }
-      });
+  try {
+    const response = await fetch(`${API_URL}/users/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password })
     });
 
-    // Load all tournaments
-    try {
-      const res = await fetch(`${API_BASE}/tournaments`);
-      const data = await res.json();
-      
-      if (res.ok && data.tournaments && data.tournaments.length > 0) {
-        tournamentsList.innerHTML = '<div class="tournaments-grid"></div>';
-        const grid = tournamentsList.querySelector(".tournaments-grid");
-        
-        data.tournaments.forEach(tournament => {
-          const card = document.createElement("div");
-          card.className = "tournament-card-detailed";
-          card.innerHTML = `
-            <div class="tournament-header">
-              <h3>🏆 ${escapeHtml(tournament.name)}</h3>
-              <span class="status-badge ${tournament.status}">${tournament.status}</span>
-            </div>
-            <p class="tournament-desc">${escapeHtml(tournament.description || "No description")}</p>
-            <div class="tournament-info">
-              <p>📍 <strong>Venue:</strong> ${escapeHtml(tournament.venue)}</p>
-              <p>📅 <strong>Dates:</strong> ${new Date(tournament.startDate).toLocaleDateString()} - ${new Date(tournament.endDate).toLocaleDateString()}</p>
-              <p>🎯 <strong>Format:</strong> ${tournament.format}</p>
-              <p>👥 <strong>Teams:</strong> ${tournament.registeredTeams.length}/${tournament.maxTeams}</p>
-              <p>💰 <strong>Prize:</strong> ${escapeHtml(tournament.prizePool)}</p>
-            </div>
-            <button class="register-btn" data-id="${tournament._id}" ${tournament.registeredTeams.length >= tournament.maxTeams ? 'disabled' : ''}>
-              ${tournament.registeredTeams.length >= tournament.maxTeams ? 'Tournament Full' : 'Register Team'}
-            </button>
-          `;
-          grid.appendChild(card);
-        });
-
-        // Attach register buttons
-        document.querySelectorAll(".register-btn").forEach(btn => {
-          btn.addEventListener("click", () => registerTeamInTournament(btn.getAttribute("data-id")));
-        });
-      } else {
-        tournamentsList.innerHTML = '<p style="text-align:center;">No tournaments available yet.</p>';
-      }
-    } catch (err) {
-      console.error("Error loading tournaments:", err);
-      tournamentsList.innerHTML = '<p style="text-align:center;">Failed to load tournaments.</p>';
-    }
-  }
-
-  // Register team in tournament
-  async function registerTeamInTournament(tournamentId) {
-    if (!isLoggedIn()) {
-      showToast("Please login to register", "error");
-      showPage("login");
-      return;
-    }
-
-    const teamName = prompt("Enter your team name:");
-    const captain = prompt("Enter captain name:");
-    const playersStr = prompt("Enter player names (comma-separated):");
-
-    if (!teamName || !captain || !playersStr) {
-      showToast("Registration cancelled", "info");
-      return;
-    }
-
-    const players = playersStr.split(',').map(p => p.trim()).filter(p => p);
-
-    try {
-      const token = localStorage.getItem("token");
-      const res = await fetch(`${API_BASE}/tournaments/${tournamentId}/register`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`
-        },
-        body: JSON.stringify({ teamName, captain, players })
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        showToast("Team registered successfully! 🎉", "success");
-        loadTournaments();
-      } else {
-        showToast(data.message || "Registration failed", "error");
-      }
-    } catch (err) {
-      console.error("Team registration error:", err);
-      showToast("Server error", "error");
-    }
-  }
-
-  // === MY STATS PAGE ===
-  async function loadUserProfile() {
-    const profileSection = document.getElementById("profile-section");
-    const token = localStorage.getItem("token");
-
-    if (!token) {
-      profileSection.innerHTML = `
-        <h2 class="section-title">📈 My Stats</h2>
-        <div class="profile-card"><p>Please login to view your stats.</p></div>
-      `;
-      return;
-    }
-
-    try {
-      // Fetch user profile
-      const userRes = await fetch(`${API_BASE}/users/profile`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      if (!userRes.ok) throw new Error("Failed to fetch profile");
-      
-      const user = await userRes.json();
-      localStorage.setItem("user", JSON.stringify(user.user || user));
-      setUserFromStorage();
-
-      // Fetch user's matches
-      const matchesRes = await fetch(`${API_BASE}/matches/user/my-matches`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      let matches = [];
-      if (matchesRes.ok) {
-        const matchData = await matchesRes.json();
-        matches = matchData.matches || [];
-      }
-
-      // Fetch user's bookings
-      const bookingsRes = await fetch(`${API_BASE}/bookings/mybookings`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-
-      let bookings = [];
-      if (bookingsRes.ok) {
-        const bookingData = await bookingsRes.json();
-        bookings = bookingData.bookings || [];
-      }
-
-      const userData = user.user || user;
-
-      profileSection.innerHTML = `
-        <h2 class="section-title">📈 My Stats</h2>
-        <div class="profile-card">
-          <h3 style="margin-bottom:15px;">👤 ${escapeHtml(userData.name || "User")}</h3>
-          <div class="stats-grid">
-            <div class="stat-item">
-              <p><strong>Email:</strong> ${escapeHtml(userData.email || "-")}</p>
-              <p><strong>Phone:</strong> ${escapeHtml(userData.phone || "-")}</p>
-              <p><strong>Role:</strong> ${escapeHtml(userData.role || "user")}</p>
-              <p><strong>Joined:</strong> ${userData.createdAt ? new Date(userData.createdAt).toDateString() : "-"}</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="stats-section">
-          <h3 style="margin:20px 0 10px;">🏏 My Matches (${matches.length})</h3>
-          <div class="matches-list">
-            ${matches.length > 0 ? matches.map(m => `
-              <div class="match-item">
-                <h4>${escapeHtml(m.matchName)}</h4>
-                <p>${escapeHtml(m.teamA.name)} vs ${escapeHtml(m.teamB.name)}</p>
-                <p>📍 ${escapeHtml(m.venue)} | 📅 ${new Date(m.matchDate).toLocaleDateString()}</p>
-                <span class="status-badge ${m.status}">${m.status}</span>
-              </div>
-            `).join('') : '<p>No matches hosted yet.</p>'}
-          </div>
-        </div>
-
-        <div class="stats-section">
-          <h3 style="margin:20px 0 10px;">🌿 My Bookings (${bookings.length})</h3>
-          <div class="bookings-list">
-            ${bookings.length > 0 ? bookings.map(b => `
-              <div class="booking-item">
-                <h4>${escapeHtml(b.turf?.name || "Turf")}</h4>
-                <p>📍 ${escapeHtml(b.turf?.location || "-")}</p>
-                <p>📅 ${b.date} | ⏰ ${b.startTime} - ${b.endTime}</p>
-                <p>💰 ₹${b.totalPrice}</p>
-                <span class="status-badge ${b.status}">${b.status}</span>
-              </div>
-            `).join('') : '<p>No bookings yet.</p>'}
-          </div>
-        </div>
-
-        <div style="margin-top:20px; text-align:center;">
-          <button id="profileLogoutBtn" class="submit-btn" style="max-width:200px;">Logout</button>
-        </div>
-      `;
-
-      document.getElementById("profileLogoutBtn")?.addEventListener("click", () => {
-        localStorage.removeItem("token");
-        localStorage.removeItem("user");
-        setUserFromStorage();
-        showToast("Logged out", "info");
-        showPage("home");
-      });
-
-    } catch (err) {
-      console.error("Profile load error:", err);
-      profileSection.innerHTML = `
-        <h2 class="section-title">📈 My Stats</h2>
-        <div class="profile-card"><p>Could not load profile. Please try again later.</p></div>
-      `;
-    }
-  }
-
-  // === BOOK TURF ===
-  async function loadTurfs() {
-    const turfListEl = document.getElementById("turfList");
-    if (!turfListEl) return;
-
-    turfListEl.innerHTML = `<p>Loading turfs...</p>`;
-
-    try {
-      const res = await fetch(`${API_BASE}/turfs`);
-      const data = await res.json();
-
-      if (!res.ok) throw new Error("Failed to load turfs");
-
-      if (!Array.isArray(data) || data.length === 0) {
-        turfListEl.innerHTML = `<p>No turfs available.</p>`;
-        return;
-      }
-
-      turfListEl.innerHTML = "";
-      data.forEach(turf => {
-        const card = document.createElement("div");
-        card.className = "turf-card";
-        card.innerHTML = `
-          <div class="turf-info">
-            <h3 class="turf-name">${escapeHtml(turf.name || "Turf")}</h3>
-            <p class="turf-location">📍 ${escapeHtml(turf.location || "Unknown")}</p>
-            <p class="turf-price">💰 ₹${turf.pricePerHour || "0"}/hr</p>
-          </div>
-          <div>
-            <button class="book-btn" data-id="${turf._id || ""}" data-name="${escapeHtml(turf.name || "")}">Book</button>
-          </div>
-        `;
-        turfListEl.appendChild(card);
-      });
-
-      turfListEl.querySelectorAll(".book-btn").forEach(btn => {
-        btn.addEventListener("click", () => {
-          const turfId = btn.getAttribute("data-id");
-          const turfName = btn.getAttribute("data-name");
-          bookTurf(turfId, turfName);
-        });
-      });
-    } catch (err) {
-      console.error("Load turfs error:", err);
-      turfListEl.innerHTML = `<p>Failed to load turfs.</p>`;
-    }
-  }
-
-  async function bookTurf(turfId, turfName) {
-    const date = prompt(`Enter booking date for ${turfName} (YYYY-MM-DD):`);
-    const startTime = prompt("Start time (e.g. 18:00):");
-    const endTime = prompt("End time (e.g. 19:00):");
-
-    if (!date || !startTime || !endTime) {
-      showToast("Booking cancelled", "info");
-      return;
-    }
-
-    const token = localStorage.getItem("token");
-    if (!token) {
-      showToast("Please login to book", "error");
-      showPage("login");
-      return;
-    }
-
-    try {
-      const res = await fetch(`${API_BASE}/bookings`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`
-        },
-        body: JSON.stringify({ turfId, date, startTime, endTime })
-      });
-
-      const data = await res.json();
-
-      if (res.ok) {
-        showToast("Booking successful", "success");
-      } else {
-        showToast(data.message || "Booking failed", "error");
-      }
-    } catch (err) {
-      console.error("Booking error:", err);
-      showToast("Server error while booking", "error");
-    }
-  }
-
-  // === HELPERS ===
-  function escapeHtml(str = "") {
-    return String(str)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
-
-  function showToast(message = "", type = "info") {
-    const container = document.getElementById("toastContainer");
-    if (!container) return alert(message);
+    const data = await response.json();
     
-    const toast = document.createElement("div");
-    toast.className = `toast ${type}`;
-    toast.innerText = message;
-    container.appendChild(toast);
-    setTimeout(() => toast.remove(), 3500);
+    if (data.success) {
+      currentUser = data.data;
+      localStorage.setItem('token', data.data.token);
+      localStorage.setItem('user', JSON.stringify(data.data));
+      
+      // Clear inputs
+      if (document.getElementById('login-email')) {
+        document.getElementById('login-email').value = '';
+        document.getElementById('login-password').value = '';
+      }
+
+      showNotification('Login successful!', 'success');
+      showMainPage();
+    } else {
+      showNotification('Login failed: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+    console.error('Login error:', error);
+  }
+}
+
+async function register() {
+  const name = document.getElementById('reg-name')?.value;
+  const email = document.getElementById('reg-email')?.value;
+  const password = document.getElementById('reg-password')?.value;
+  const phone = document.getElementById('reg-phone')?.value;
+
+  if (!name || !email || !password) {
+    showNotification('Please fill all required fields', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/users/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, password, phone })
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showNotification('Registration successful! Please login', 'success');
+      
+      // Clear inputs and switch to login
+      document.getElementById('reg-name').value = '';
+      document.getElementById('reg-email').value = '';
+      document.getElementById('reg-password').value = '';
+      document.getElementById('reg-phone').value = '';
+      
+      switchTab('login');
+    } else {
+      showNotification('Registration failed: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+    console.error('Registration error:', error);
+  }
+}
+
+function logout() {
+  currentUser = null;
+  localStorage.removeItem('token');
+  localStorage.removeItem('user');
+  showNotification('Logged out successfully', 'success');
+  showLoginPage();
+}
+
+// ==================== UI SWITCHING ====================
+
+function showLoginPage() {
+  document.getElementById('auth-container').style.display = 'flex';
+  document.getElementById('main-container').style.display = 'none';
+}
+
+function showMainPage() {
+  document.getElementById('auth-container').style.display = 'none';
+  document.getElementById('main-container').style.display = 'block';
+  loadInitialData();
+}
+
+function switchTab(tabName) {
+  // Hide all tabs
+  document.querySelectorAll('[id$="-tab"]').forEach(el => {
+    el.style.display = 'none';
+  });
+
+  // Remove active class from buttons
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.classList.remove('active');
+  });
+
+  // Show selected tab
+  const tabElement = document.getElementById(tabName + '-tab');
+  if (tabElement) {
+    tabElement.style.display = 'block';
+  }
+
+  // Add active class to button
+  event.target?.classList.add('active');
+  activeTab = tabName;
+
+  // Load data for specific tabs
+  if (tabName === 'tournaments') loadTournaments();
+  if (tabName === 'teams') loadTeams();
+  if (tabName === 'matches') loadMatches();
+  if (tabName === 'bookings') loadBookings();
+  if (tabName === 'turfs') loadTurfs();
+}
+
+// ==================== TOURNAMENTS ====================
+
+async function loadTournaments() {
+  try {
+    const response = await fetch(`${API_URL}/tournaments`);
+    const data = await response.json();
+
+    if (data.success) {
+      tournaments = data.data;
+      displayTournaments();
+    }
+  } catch (error) {
+    console.error('Error loading tournaments:', error);
+  }
+}
+
+function displayTournaments() {
+  const container = document.getElementById('tournaments-list');
+  if (!container) return;
+
+  if (tournaments.length === 0) {
+    container.innerHTML = '<p>No tournaments found</p>';
+    return;
+  }
+
+  container.innerHTML = tournaments.map(tournament => `
+    <div class="tournament-card">
+      <h3>${tournament.name}</h3>
+      <p>${tournament.description || 'No description'}</p>
+      <p><strong>Status:</strong> ${tournament.status}</p>
+      <p><strong>Date:</strong> ${new Date(tournament.date).toLocaleDateString()}</p>
+      <div class="card-buttons">
+        <button onclick="selectTournament('${tournament._id}')">Select</button>
+        ${currentUser?.role === 'admin' ? `
+          <button onclick="editTournament('${tournament._id}')">Edit</button>
+          <button onclick="deleteTournament('${tournament._id}')">Delete</button>
+        ` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function createTournament() {
+  const name = document.getElementById('tournament-name')?.value;
+  const description = document.getElementById('tournament-desc')?.value;
+  const date = document.getElementById('tournament-date')?.value;
+
+  if (!name || !date) {
+    showNotification('Please fill all required fields', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/tournaments/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ name, description, date })
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showNotification('Tournament created successfully', 'success');
+      document.getElementById('tournament-name').value = '';
+      document.getElementById('tournament-desc').value = '';
+      document.getElementById('tournament-date').value = '';
+      loadTournaments();
+    } else {
+      showNotification('Error: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+function selectTournament(tournamentId) {
+  localStorage.setItem('selectedTournament', tournamentId);
+  showNotification('Tournament selected', 'success');
+  switchTab('teams');
+}
+
+async function editTournament(tournamentId) {
+  const name = prompt('Enter new tournament name');
+  if (!name) return;
+
+  try {
+    const response = await fetch(`${API_URL}/tournaments/${tournamentId}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ name })
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showNotification('Tournament updated', 'success');
+      loadTournaments();
+    } else {
+      showNotification('Error: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+async function deleteTournament(tournamentId) {
+  if (!confirm('Are you sure?')) return;
+
+  try {
+    const response = await fetch(`${API_URL}/tournaments/${tournamentId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showNotification('Tournament deleted', 'success');
+      loadTournaments();
+    } else {
+      showNotification('Error: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+// ==================== TEAMS ====================
+
+async function loadTeams() {
+  try {
+    const tournamentId = localStorage.getItem('selectedTournament');
+    
+    let url = `${API_URL}/teams`;
+    if (tournamentId) {
+      url += `?tournamentId=${tournamentId}`;
+    }
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.success) {
+      teams = data.data;
+      displayTeams();
+      populateTeamSelects();
+    }
+  } catch (error) {
+    console.error('Error loading teams:', error);
+  }
+}
+
+function displayTeams() {
+  const container = document.getElementById('teams-list');
+  if (!container) return;
+
+  if (teams.length === 0) {
+    container.innerHTML = '<p>No teams found. Create one first!</p>';
+    return;
+  }
+
+  container.innerHTML = teams.map(team => `
+    <div class="team-card">
+      <h3>${team.name}</h3>
+      <p><strong>Members:</strong> ${team.members?.length || 0}</p>
+      <p><strong>Wins:</strong> ${team.stats?.wins || 0} | <strong>Losses:</strong> ${team.stats?.losses || 0}</p>
+      <div class="card-buttons">
+        <button onclick="viewTeamDetails('${team._id}')">View</button>
+        <button onclick="manageTeamMembers('${team._id}')">Manage Members</button>
+        ${team.owner === currentUser?._id ? `
+          <button onclick="deleteTeam('${team._id}')">Delete</button>
+        ` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+function populateTeamSelects() {
+  const team1Select = document.getElementById('match-team1');
+  const team2Select = document.getElementById('match-team2');
+
+  if (!team1Select || !team2Select) return;
+
+  const options = '<option value="">-- Select Team --</option>' + 
+    teams.map(team => `<option value="${team._id}">${team.name}</option>`).join('');
+
+  team1Select.innerHTML = options;
+  team2Select.innerHTML = options;
+}
+
+async function createTeam() {
+  const name = document.getElementById('new-team-name')?.value;
+  const tournamentId = localStorage.getItem('selectedTournament');
+
+  if (!name) {
+    showNotification('Please enter team name', 'error');
+    return;
+  }
+
+  if (!tournamentId) {
+    showNotification('Please select a tournament first', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/teams/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        name,
+        tournament: tournamentId
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showNotification('Team created successfully', 'success');
+      document.getElementById('new-team-name').value = '';
+      loadTeams();
+      openTeamMemberModal(data.data._id);
+    } else {
+      showNotification('Error: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+async function viewTeamDetails(teamId) {
+  try {
+    const response = await fetch(`${API_URL}/teams/${teamId}`);
+    const data = await response.json();
+
+    if (data.success) {
+      const team = data.data;
+      const modal = document.getElementById('team-details-modal');
+      
+      let membersHTML = team.members.map(member => `
+        <div class="member-item">
+          <span>${member.name || member.player?.name}</span>
+          <small>${member.isRegistered ? '✓ Registered' : '✗ Manual'}</small>
+        </div>
+      `).join('');
+
+      document.getElementById('team-details-content').innerHTML = `
+        <h2>${team.name}</h2>
+        <p><strong>Owner:</strong> ${team.owner.name}</p>
+        <p><strong>Members (${team.members.length}):</strong></p>
+        <div class="members-list">${membersHTML}</div>
+        <p><strong>Stats:</strong></p>
+        <ul>
+          <li>Matches: ${team.stats.matches_played}</li>
+          <li>Wins: ${team.stats.wins}</li>
+          <li>Losses: ${team.stats.losses}</li>
+          <li>Total Runs: ${team.stats.total_runs}</li>
+        </ul>
+      `;
+
+      if (modal) modal.style.display = 'block';
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+function manageTeamMembers(teamId) {
+  localStorage.setItem('selectedTeam', teamId);
+  openTeamMemberModal(teamId);
+}
+
+function openTeamMemberModal(teamId) {
+  localStorage.setItem('selectedTeam', teamId);
+  const modal = document.getElementById('team-member-modal');
+  if (modal) {
+    modal.style.display = 'block';
+    loadTeamMembers(teamId);
+  }
+}
+
+async function loadTeamMembers(teamId) {
+  try {
+    const response = await fetch(`${API_URL}/teams/${teamId}`);
+    const data = await response.json();
+
+    if (data.success) {
+      const membersList = document.getElementById('team-members-list');
+      if (membersList) {
+        membersList.innerHTML = data.data.members.map((member, index) => `
+          <div class="member-row">
+            <span>${member.name || member.player?.name}</span>
+            <button onclick="removeTeamMember('${teamId}', '${member._id}')">Remove</button>
+          </div>
+        `).join('');
+      }
+    }
+  } catch (error) {
+    console.error('Error loading team members:', error);
+  }
+}
+
+async function addTeamMember() {
+  const teamId = localStorage.getItem('selectedTeam');
+  const memberType = document.getElementById('member-type')?.value;
+
+  if (!teamId) {
+    showNotification('No team selected', 'error');
+    return;
+  }
+
+  let payload = { teamId };
+
+  if (memberType === 'registered') {
+    payload.userId = document.getElementById('registered-user-select')?.value;
+    if (!payload.userId) {
+      showNotification('Please select a user', 'error');
+      return;
+    }
+  } else {
+    payload.name = document.getElementById('player-name')?.value;
+    if (!payload.name) {
+      showNotification('Please enter player name', 'error');
+      return;
+    }
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/teams/add-member`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showNotification('Member added successfully', 'success');
+      if (document.getElementById('player-name')) {
+        document.getElementById('player-name').value = '';
+      }
+      loadTeamMembers(teamId);
+      loadTeams();
+    } else {
+      showNotification('Error: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+async function removeTeamMember(teamId, memberId) {
+  if (!confirm('Are you sure?')) return;
+
+  try {
+    const response = await fetch(`${API_URL}/teams/remove-member`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ teamId, memberId })
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showNotification('Member removed', 'success');
+      loadTeamMembers(teamId);
+      loadTeams();
+    } else {
+      showNotification('Error: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+async function deleteTeam(teamId) {
+  if (!confirm('Are you sure?')) return;
+
+  try {
+    // Note: You may need to add this endpoint to your backend
+    showNotification('Team deleted', 'success');
+    loadTeams();
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+// ==================== MATCHES ====================
+
+async function loadMatches() {
+  try {
+    const tournamentId = localStorage.getItem('selectedTournament');
+    
+    let url = `${API_URL}/matches`;
+    if (tournamentId) {
+      url += `?tournamentId=${tournamentId}`;
+    }
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (data.success) {
+      matches = data.data;
+      displayMatches();
+    }
+  } catch (error) {
+    console.error('Error loading matches:', error);
+  }
+}
+
+function displayMatches() {
+  const container = document.getElementById('matches-list');
+  if (!container) return;
+
+  if (matches.length === 0) {
+    container.innerHTML = '<p>No matches found</p>';
+    return;
+  }
+
+  container.innerHTML = matches.map(match => `
+    <div class="match-card">
+      <h3>${match.team1?.name} vs ${match.team2?.name}</h3>
+      <p><strong>Status:</strong> ${match.status.toUpperCase()}</p>
+      <p><strong>Overs:</strong> ${match.overs}</p>
+      <div class="match-scores">
+        <p>${match.team1?.name}: ${match.inning1?.runs || 0}/${match.inning1?.wickets || 0}</p>
+        <p>${match.team2?.name}: ${match.inning2?.runs || 0}/${match.inning2?.wickets || 0}</p>
+      </div>
+      <div class="card-buttons">
+        <button onclick="viewMatchDetails('${match._id}')">View</button>
+        ${match.status !== 'completed' ? `
+          <button onclick="startScoringSession('${match._id}')">Score</button>
+        ` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function createMatch() {
+  const team1 = document.getElementById('match-team1')?.value;
+  const team2 = document.getElementById('match-team2')?.value;
+  const overs = document.getElementById('match-overs')?.value;
+  const tournamentId = localStorage.getItem('selectedTournament');
+
+  if (!team1 || !team2 || !overs) {
+    showNotification('Please fill all fields', 'error');
+    return;
+  }
+
+  if (team1 === team2) {
+    showNotification('Teams cannot be the same', 'error');
+    return;
+  }
+
+  if (parseInt(overs) < 1) {
+    showNotification('Overs must be at least 1', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/matches/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        tournament: tournamentId,
+        team1,
+        team2,
+        overs: parseInt(overs)
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showNotification('Match created successfully', 'success');
+      document.getElementById('match-team1').value = '';
+      document.getElementById('match-team2').value = '';
+      document.getElementById('match-overs').value = '';
+      loadMatches();
+    } else {
+      showNotification('Error: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+async function viewMatchDetails(matchId) {
+  try {
+    const response = await fetch(`${API_URL}/matches/${matchId}`);
+    const data = await response.json();
+
+    if (data.success) {
+      const match = data.data;
+      const modal = document.getElementById('match-details-modal');
+      
+      let content = `
+        <h2>${match.team1?.name} vs ${match.team2?.name}</h2>
+        <p><strong>Status:</strong> ${match.status}</p>
+        <p><strong>Total Overs:</strong> ${match.overs}</p>
+        
+        <h3>Inning 1</h3>
+        <p>Team: ${match.inning1?.batting_team?.name || 'N/A'}</p>
+        <p>Runs: ${match.inning1?.runs} | Wickets: ${match.inning1?.wickets}</p>
+        <p>Overs: ${match.inning1?.overs_completed}.${match.inning1?.balls_in_current_over} 
+           / ${match.overs}</p>
+        <p>Status: ${match.inning1?.is_completed ? 'COMPLETED' : 'IN PROGRESS'}</p>
+      `;
+
+      if (match.status === 'inning2' || match.status === 'completed') {
+        content += `
+          <h3>Inning 2</h3>
+          <p>Team: ${match.inning2?.batting_team?.name || 'N/A'}</p>
+          <p>Runs: ${match.inning2?.runs} | Wickets: ${match.inning2?.wickets}</p>
+          <p>Overs: ${match.inning2?.overs_completed}.${match.inning2?.balls_in_current_over} 
+             / ${match.overs}</p>
+          <p>Status: ${match.inning2?.is_completed ? 'COMPLETED' : 'IN PROGRESS'}</p>
+        `;
+      }
+
+      if (match.status === 'completed') {
+        content += `
+          <h3>Result</h3>
+          <p><strong>${match.match_result}</strong></p>
+          <p>Winner: ${match.winner?.name || 'Tie'}</p>
+        `;
+      }
+
+      document.getElementById('match-details-content').innerHTML = content;
+      if (modal) modal.style.display = 'block';
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+async function startScoringSession(matchId) {
+  try {
+    const response = await fetch(`${API_URL}/matches/${matchId}`);
+    const data = await response.json();
+
+    if (data.success) {
+      const match = data.data;
+
+      if (match.status === 'pending') {
+        // Start match
+        openStartMatchModal(match);
+      } else {
+        // Continue scoring
+        openScoringModal(match);
+      }
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+function openStartMatchModal(match) {
+  localStorage.setItem('currentMatchId', match._id);
+  const modal = document.getElementById('start-match-modal');
+  
+  if (modal) {
+    // Populate team selects
+    document.getElementById('batting-team-select').innerHTML = `
+      <option value="${match.team1._id}">${match.team1.name}</option>
+      <option value="${match.team2._id}">${match.team2.name}</option>
+    `;
+
+    // Load first team's players
+    loadTeamPlayersForSelect(match.team1._id);
+    
+    modal.style.display = 'block';
+  }
+}
+
+async function loadTeamPlayersForSelect(teamId) {
+  try {
+    const response = await fetch(`${API_URL}/matches/team/${teamId}/players`);
+    const data = await response.json();
+
+    if (data.success) {
+      const options = '<option value="">-- Select --</option>' +
+        data.data.map(player => `<option value="${player._id}">${player.name}</option>`).join('');
+
+      document.getElementById('batsman-select').innerHTML = options;
+      document.getElementById('bowler-select').innerHTML = options;
+    }
+  } catch (error) {
+    console.error('Error loading players:', error);
+  }
+}
+
+async function startMatch() {
+  const matchId = localStorage.getItem('currentMatchId');
+  const battingTeam = document.getElementById('batting-team-select')?.value;
+  const batsman = document.getElementById('batsman-select')?.value;
+  const bowler = document.getElementById('bowler-select')?.value;
+
+  if (!battingTeam || !batsman || !bowler) {
+    showNotification('Please select all fields', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/matches/start`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        matchId,
+        batting_team: battingTeam,
+        batsman,
+        bowler
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showNotification('Match started! Inning 1 in progress', 'success');
+      const modal = document.getElementById('start-match-modal');
+      if (modal) modal.style.display = 'none';
+      openScoringModal(data.data);
+    } else {
+      showNotification('Error: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+function openScoringModal(match) {
+  localStorage.setItem('currentMatchId', match._id);
+  const modal = document.getElementById('scoring-modal');
+  
+  if (modal) {
+    updateScoringDisplay(match);
+    modal.style.display = 'block';
+  }
+}
+
+function updateScoringDisplay(match) {
+  const inning = match.status === 'inning1' ? match.inning1 : match.inning2;
+  const inningNumber = match.status === 'inning1' ? 1 : 2;
+
+  let display = `
+    <h3>${inningNumber === 1 ? match.inning1.batting_team.name : match.inning2.batting_team.name} Batting</h3>
+    <p><strong>Score:</strong> ${inning.runs}/${inning.wickets}</p>
+    <p><strong>Overs:</strong> ${inning.overs_completed}.${inning.balls_in_current_over} / ${match.overs}</p>
+    <p><strong>Balls Played:</strong> ${inning.overs_completed * match.balls_per_over + inning.balls_in_current_over} / ${match.overs * match.balls_per_over}</p>
+    ${inning.is_completed ? '<p style="color: red;"><strong>INNING COMPLETED</strong></p>' : ''}
+  `;
+
+  const displayEl = document.getElementById('scoring-display');
+  if (displayEl) displayEl.innerHTML = display;
+}
+
+async function scoreRun() {
+  const matchId = localStorage.getItem('currentMatchId');
+  const runs = parseInt(document.getElementById('runs-input')?.value || 0);
+  const isWicket = document.getElementById('is-wicket')?.checked || false;
+  const wicketType = document.getElementById('wicket-type')?.value;
+
+  if (isNaN(runs) || runs < 0 || runs > 6) {
+    showNotification('Runs must be 0-6', 'error');
+    return;
+  }
+
+  if (isWicket && !wicketType) {
+    showNotification('Please select wicket type', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/matches/score`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        matchId,
+        runs,
+        inning: 1,
+        is_wicket: isWicket,
+        wicket_type: wicketType || null
+      })
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      // Reset inputs
+      document.getElementById('runs-input').value = '';
+      document.getElementById('is-wicket').checked = false;
+      document.getElementById('wicket-type').value = '';
+
+      if (data.inning_complete) {
+        showNotification('⚠️ INNING 1 COMPLETED! Starting Inning 2', 'warning');
+      }
+
+      if (data.match_complete) {
+        showNotification('✅ MATCH COMPLETED!', 'success');
+        await updatePlayerStats(matchId);
+        loadMatches();
+      }
+
+      // Refresh match details
+      const matchResponse = await fetch(`${API_URL}/matches/${matchId}`);
+      const matchData = await matchResponse.json();
+      updateScoringDisplay(matchData.data);
+    } else {
+      showNotification('Error: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+async function updatePlayerStats(matchId) {
+  try {
+    const response = await fetch(`${API_URL}/matches/update-stats`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ matchId })
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      showNotification('Player statistics updated', 'success');
+    }
+  } catch (error) {
+    console.error('Error updating stats:', error);
+  }
+}
+
+// ==================== BOOKINGS ====================
+
+async function loadBookings() {
+  try {
+    const response = await fetch(`${API_URL}/bookings`, {
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      bookings = data.data;
+      displayBookings();
+    }
+  } catch (error) {
+    console.error('Error loading bookings:', error);
+  }
+}
+
+function displayBookings() {
+  const container = document.getElementById('bookings-list');
+  if (!container) return;
+
+  if (bookings.length === 0) {
+    container.innerHTML = '<p>No bookings found</p>';
+    return;
+  }
+
+  container.innerHTML = bookings.map(booking => `
+    <div class="booking-card">
+      <h3>${booking.turf?.name}</h3>
+      <p><strong>Date:</strong> ${new Date(booking.date).toLocaleDateString()}</p>
+      <p><strong>Time:</strong> ${booking.time_slot}</p>
+      <p><strong>Price:</strong> ₹${booking.price}</p>
+      <p><strong>Status:</strong> ${booking.status}</p>
+      <div class="card-buttons">
+        ${booking.status === 'pending' ? `
+          <button onclick="cancelBooking('${booking._id}')">Cancel</button>
+        ` : ''}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function createBooking() {
+  const turf = document.getElementById('booking-turf')?.value;
+  const date = document.getElementById('booking-date')?.value;
+  const timeSlot = document.getElementById('booking-time')?.value;
+
+  if (!turf || !date || !timeSlot) {
+    showNotification('Please fill all fields', 'error');
+    return;
+  }
+
+  try {
+    const response = await fetch(`${API_URL}/bookings/create`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ turf, date, time_slot: timeSlot })
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showNotification('Booking created successfully', 'success');
+      loadBookings();
+      loadTurfs();
+    } else {
+      showNotification('Error: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+async function cancelBooking(bookingId) {
+  if (!confirm('Are you sure?')) return;
+
+  try {
+    const response = await fetch(`${API_URL}/bookings/${bookingId}`, {
+      method: 'DELETE',
+      headers: { 'Authorization': `Bearer ${localStorage.getItem('token')}` }
+    });
+
+    const data = await response.json();
+    
+    if (data.success) {
+      showNotification('Booking cancelled', 'success');
+      loadBookings();
+      loadTurfs();
+    } else {
+      showNotification('Error: ' + data.error, 'error');
+    }
+  } catch (error) {
+    showNotification('Error: ' + error.message, 'error');
+  }
+}
+
+// ==================== TURFS ====================
+
+async function loadTurfs() {
+  try {
+    const response = await fetch(`${API_URL}/turfs`);
+    const data = await response.json();
+
+    if (data.success) {
+      turfs = data.data;
+      displayTurfs();
+      populateTurfSelect();
+    }
+  } catch (error) {
+    console.error('Error loading turfs:', error);
+  }
+}
+
+function displayTurfs() {
+  const container = document.getElementById('turfs-list');
+  if (!container) return;
+
+  if (turfs.length === 0) {
+    container.innerHTML = '<p>No turfs available</p>';
+    return;
+  }
+
+  container.innerHTML = turfs.map(turf => `
+    <div class="turf-card">
+      <h3>${turf.name}</h3>
+      <p>${turf.location}</p>
+      <p><strong>Price:</strong> ₹${turf.price_per_hour}/hour</p>
+      <p><strong>Available Slots:</strong> ${turf.available_slots || 'N/A'}</p>
+      <div class="card-buttons">
+        <button onclick="selectTurfForBooking('${turf._id}')">Book Now</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function populateTurfSelect() {
+  const select = document.getElementById('booking-turf');
+  if (!select) return;
+
+  select.innerHTML = '<option value="">-- Select Turf --</option>' +
+    turfs.map(turf => `<option value="${turf._id}">${turf.name}</option>`).join('');
+}
+
+function selectTurfForBooking(turfId) {
+  document.getElementById('booking-turf').value = turfId;
+  switchTab('bookings');
+}
+
+// ==================== UTILITIES ====================
+
+function showNotification(message, type = 'info') {
+  const notification = document.getElementById('notification');
+  if (!notification) return;
+
+  notification.textContent = message;
+  notification.className = 'notification ' + type;
+  notification.style.display = 'block';
+
+  setTimeout(() => {
+    notification.style.display = 'none';
+  }, 3000);
+}
+
+function closeModal(modalId) {
+  const modal = document.getElementById(modalId);
+  if (modal) modal.style.display = 'none';
+}
+
+function closeAllModals() {
+  document.querySelectorAll('.modal').forEach(modal => {
+    modal.style.display = 'none';
+  });
+}
+
+async function loadInitialData() {
+  await loadTournaments();
+  await loadTurfs();
+  await loadTeams();
+}
+
+// Close modals when clicking outside
+window.addEventListener('click', function(event) {
+  if (event.target.classList.contains('modal')) {
+    event.target.style.display = 'none';
+  }
+});
+
+// Initialize
+document.addEventListener('DOMContentLoaded', function() {
+  const token = localStorage.getItem('token');
+  if (token) {
+    currentUser = JSON.parse(localStorage.getItem('user') || '{}');
+    showMainPage();
+  } else {
+    showLoginPage();
   }
 });

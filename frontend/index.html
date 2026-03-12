@@ -1,208 +1,369 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CricZone - Score. Book. Compete.</title>
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🏏 Cricket Tournament Manager</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
-
 <body>
-  <!-- ✅ Navigation -->
-  <nav class="navbar">
-    <div class="nav-container">
-      <div class="nav-logo">
-        <span class="cricket-emoji">🏏</span>
-        <span class="logo-text">CricZone</span>
-      </div>
+    <!-- Authentication Container -->
+    <div id="auth-container" class="auth-container">
+        <div class="auth-panel">
+            <h1>🏏 Cricket Tournament Manager</h1>
+            
+            <div class="tab-buttons">
+                <button class="tab-btn active" onclick="switchAuthTab('login')">Login</button>
+                <button class="tab-btn" onclick="switchAuthTab('register')">Register</button>
+            </div>
 
-      <div class="nav-links" id="navLinks">
-        <a href="#" class="nav-link active" data-page="home">Home</a>
-        <a href="#" class="nav-link" data-page="host-match">Host Match</a>
-        <a href="#" class="nav-link" data-page="score-match">Score Match</a>
-        <a href="#" class="nav-link" data-page="tournaments">Tournaments</a>
-        <a href="#" class="nav-link" data-page="my-stats">My Stats</a>
-        <a href="#" class="nav-link" data-page="book-turf">Book Turf</a>
-        <a href="#" class="nav-link" data-page="login" id="navLogin">Login</a>
-      </div>
+            <!-- Login Tab -->
+            <div id="login-tab" class="auth-tab active">
+                <h2>Login</h2>
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" id="login-email" placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Password:</label>
+                    <input type="password" id="login-password" placeholder="Password">
+                </div>
+                <button class="btn btn-primary" onclick="login()">Login</button>
+            </div>
 
-      <!-- Right side for user email / logout -->
-      <div class="nav-auth" id="navAuth" style="display:none;">
-        <span id="navUserEmail"></span>
-        <button id="logoutBtn" class="btn-logout">Logout</button>
-      </div>
+            <!-- Register Tab -->
+            <div id="register-tab" class="auth-tab">
+                <h2>Create Account</h2>
+                <div class="form-group">
+                    <label>Full Name:</label>
+                    <input type="text" id="reg-name" placeholder="Your Name">
+                </div>
+                <div class="form-group">
+                    <label>Email:</label>
+                    <input type="email" id="reg-email" placeholder="your@email.com">
+                </div>
+                <div class="form-group">
+                    <label>Password:</label>
+                    <input type="password" id="reg-password" placeholder="Create Password">
+                </div>
+                <div class="form-group">
+                    <label>Phone:</label>
+                    <input type="tel" id="reg-phone" placeholder="Phone Number">
+                </div>
+                <button class="btn btn-primary" onclick="register()">Register</button>
+            </div>
+        </div>
     </div>
-  </nav>
 
-  <!-- PAGES -->
-  <!-- Home -->
-  <div class="page" id="home">
-    <section class="hero">
-      <div class="hero-bg">
-        <div class="floating-orb orb-1"></div>
-        <div class="floating-orb orb-2"></div>
-      </div>
-      <div class="hero-content">
-        <h1 class="hero-title">Score. Book. Compete.</h1>
-        <p class="hero-subtitle">Your Cricket Zone Awaits!</p>
-        <div class="hero-buttons">
-          <button class="cta-btn primary" data-page="host-match">🏏 Host a Match</button>
-          <button class="cta-btn secondary" data-page="tournaments">🏆 Join Tournament</button>
-        </div>
-      </div>
-    </section>
+    <!-- Main Application Container -->
+    <div id="main-container" style="display: none;">
+        <!-- Header -->
+        <header class="header">
+            <div class="header-content">
+                <h1>🏏 Cricket Tournament Manager</h1>
+                <div class="header-actions">
+                    <span id="user-name" class="user-info"></span>
+                    <button class="btn btn-secondary" onclick="logout()">Logout</button>
+                </div>
+            </div>
+        </header>
 
-    <section class="section">
-      <div class="container">
-        <h2 class="section-title">🔴 Live Matches</h2>
-        <div class="matches-grid" id="liveMatchesGrid">
-          <p style="text-align:center;">No live matches at the moment.</p>
-        </div>
-      </div>
-    </section>
+        <!-- Notification -->
+        <div id="notification" class="notification"></div>
 
-    <section class="section">
-      <div class="container">
-        <h2 class="section-title">🏆 Ongoing Tournaments</h2>
-        <div class="tournaments-grid" id="tournamentsGrid">
-          <p style="text-align:center;">Stay tuned for tournaments!</p>
-        </div>
-      </div>
-    </section>
-  </div>
+        <!-- Tab Navigation -->
+        <nav class="tabs-nav">
+            <button class="tab-btn active" onclick="switchTab('tournaments')">Tournaments</button>
+            <button class="tab-btn" onclick="switchTab('teams')">Teams</button>
+            <button class="tab-btn" onclick="switchTab('matches')">Matches</button>
+            <button class="tab-btn" onclick="switchTab('bookings')">Bookings</button>
+            <button class="tab-btn" onclick="switchTab('turfs')">Turfs</button>
+        </nav>
 
-  <!-- Host Match -->
-  <div class="page" id="host-match">
-    <div class="container">
-      <div class="form-card">
-        <h2 class="form-title">🏏 Host a New Match</h2>
-        <form id="hostMatchForm">
-          <div class="form-group">
-            <label>Match Name</label>
-            <input type="text" id="matchName" placeholder="e.g., Sunday League Match" required />
-          </div>
+        <!-- Content Area -->
+        <main class="content-area">
 
-          <div class="form-row">
+            <!-- TOURNAMENTS TAB -->
+            <section id="tournaments-tab" class="tab-content active">
+                <h2>Tournaments</h2>
+                
+                <div class="section-card">
+                    <h3>Create New Tournament</h3>
+                    <div class="form-group">
+                        <label>Tournament Name:</label>
+                        <input type="text" id="tournament-name" placeholder="Tournament Name">
+                    </div>
+                    <div class="form-group">
+                        <label>Description:</label>
+                        <textarea id="tournament-desc" placeholder="Description" rows="3"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>Date:</label>
+                        <input type="date" id="tournament-date">
+                    </div>
+                    <button class="btn btn-success" onclick="createTournament()">Create Tournament</button>
+                </div>
+
+                <div class="section-card">
+                    <h3>Available Tournaments</h3>
+                    <div id="tournaments-list" class="items-grid"></div>
+                </div>
+            </section>
+
+            <!-- TEAMS TAB -->
+            <section id="teams-tab" class="tab-content">
+                <h2>Teams</h2>
+                
+                <div class="section-card">
+                    <h3>Create New Team</h3>
+                    <div class="form-group">
+                        <label>Team Name:</label>
+                        <input type="text" id="new-team-name" placeholder="Team Name">
+                    </div>
+                    <button class="btn btn-success" onclick="createTeam()">Create Team</button>
+                </div>
+
+                <div class="section-card">
+                    <h3>All Teams</h3>
+                    <div id="teams-list" class="items-grid"></div>
+                </div>
+            </section>
+
+            <!-- MATCHES TAB -->
+            <section id="matches-tab" class="tab-content">
+                <h2>Matches</h2>
+                
+                <div class="section-card">
+                    <h3>Create New Match</h3>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Team 1:</label>
+                            <select id="match-team1"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Team 2:</label>
+                            <select id="match-team2"></select>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label>Overs:</label>
+                        <input type="number" id="match-overs" min="1" max="50" value="20">
+                    </div>
+                    <button class="btn btn-success" onclick="createMatch()">Create Match</button>
+                </div>
+
+                <div class="section-card">
+                    <h3>All Matches</h3>
+                    <div id="matches-list" class="items-grid"></div>
+                </div>
+            </section>
+
+            <!-- BOOKINGS TAB -->
+            <section id="bookings-tab" class="tab-content">
+                <h2>Turf Bookings</h2>
+                
+                <div class="section-card">
+                    <h3>Book a Turf</h3>
+                    <div class="form-group">
+                        <label>Select Turf:</label>
+                        <select id="booking-turf"></select>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Date:</label>
+                            <input type="date" id="booking-date">
+                        </div>
+                        <div class="form-group">
+                            <label>Time Slot:</label>
+                            <input type="time" id="booking-time">
+                        </div>
+                    </div>
+                    <button class="btn btn-success" onclick="createBooking()">Book Now</button>
+                </div>
+
+                <div class="section-card">
+                    <h3>Your Bookings</h3>
+                    <div id="bookings-list" class="items-grid"></div>
+                </div>
+            </section>
+
+            <!-- TURFS TAB -->
+            <section id="turfs-tab" class="tab-content">
+                <h2>Available Turfs</h2>
+                <div id="turfs-list" class="items-grid"></div>
+            </section>
+
+        </main>
+    </div>
+
+    <!-- MODALS -->
+
+    <!-- Team Member Modal -->
+    <div id="team-member-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('team-member-modal')">&times;</span>
+            <h2>Manage Team Members</h2>
+            
             <div class="form-group">
-              <label>Match Type</label>
-              <select id="matchType" required>
-                <option value="">Select Type</option>
-                <option value="T20">T20 (20 overs)</option>
-                <option value="ODI">ODI (50 overs)</option>
-                <option value="Test">Test Match</option>
-                <option value="Custom">Custom Overs</option>
-              </select>
+                <label>Member Type:</label>
+                <select id="member-type" onchange="toggleMemberTypeSelect()">
+                    <option value="registered">Registered User</option>
+                    <option value="manual">Manual Entry</option>
+                </select>
             </div>
-            <div class="form-group" id="customOversGroup" style="display: none;">
-              <label>Number of Overs</label>
-              <input type="number" id="customOvers" min="1" max="50" placeholder="Enter overs" />
+
+            <div id="registered-member-div">
+                <div class="form-group">
+                    <label>Select User:</label>
+                    <select id="registered-user-select"></select>
+                </div>
             </div>
-          </div>
 
-          <div class="form-group">
-            <label>Team A Name</label>
-            <input type="text" id="teamAName" placeholder="Enter team name" required />
-          </div>
-
-          <div class="form-group">
-            <label>Team A Players</label>
-            <textarea id="teamAPlayers" rows="3" placeholder="Player 1, Player 2, Player 3..." required></textarea>
-          </div>
-
-          <div class="form-group">
-            <label>Team B Name</label>
-            <input type="text" id="teamBName" placeholder="Enter team name" required />
-          </div>
-
-          <div class="form-group">
-            <label>Team B Players</label>
-            <textarea id="teamBPlayers" rows="3" placeholder="Player 1, Player 2, Player 3..." required></textarea>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Venue</label>
-              <input type="text" id="venue" placeholder="Ground name or location" required />
+            <div id="manual-member-div" style="display: none;">
+                <div class="form-group">
+                    <label>Player Name:</label>
+                    <input type="text" id="player-name" placeholder="Player Name">
+                </div>
+                <div class="form-group">
+                    <label>Shirt Number:</label>
+                    <input type="number" id="shirt-number" min="1" max="99">
+                </div>
             </div>
-            <div class="form-group">
-              <label>Match Date</label>
-              <input type="date" id="matchDate" required />
-            </div>
-          </div>
 
-          <div class="form-group">
-            <label>Tournament (Optional)</label>
-            <select id="tournamentSelect">
-              <option value="">Not part of tournament</option>
-            </select>
-          </div>
+            <button class="btn btn-primary" onclick="addTeamMember()">Add Member</button>
 
-          <button type="submit" class="submit-btn">✨ Create Match</button>
-        </form>
-      </div>
-    </div>
-  </div>
-
-  <!-- Score Match -->
-  <div class="page" id="score-match">
-    <div class="container">
-      <h2 class="section-title">📊 Score a Match</h2>
-      <p>Feature under development.</p>
-    </div>
-  </div>
-
-  <!-- Tournaments -->
-  <div class="page" id="tournaments">
-    <div class="container">
-      <h2 class="section-title">🏆 Tournaments</h2>
-      <p>Explore ongoing tournaments here soon!</p>
-    </div>
-  </div>
-
-  <!-- My Stats -->
-  <div class="page" id="my-stats">
-    <div class="container">
-      <div id="profile-section">
-        <h2 class="section-title">📈 My Stats</h2>
-        <div class="profile-card">
-          <p>Not logged in. Please login to view your stats.</p>
+            <h3>Current Members</h3>
+            <div id="team-members-list" class="members-list"></div>
         </div>
-      </div>
     </div>
-  </div>
 
-  <!-- Book Turf -->
-  <div class="page" id="book-turf">
-    <div class="container">
-      <h2 class="section-title">🌿 Book a Turf</h2>
-      <div id="turfList" class="turf-grid"></div>
+    <!-- Team Details Modal -->
+    <div id="team-details-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('team-details-modal')">&times;</span>
+            <div id="team-details-content"></div>
+        </div>
     </div>
-  </div>
 
-  <!-- Login -->
-  <div class="page" id="login">
-    <div class="container">
-      <div class="form-card">
-        <h2 class="form-title">🔐 Login</h2>
-        <form id="loginForm">
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" id="loginEmail" placeholder="Enter your email" required />
-          </div>
-          <div class="form-group">
-            <label>Password</label>
-            <input type="password" id="loginPassword" placeholder="Enter your password" required />
-          </div>
-          <button type="submit" class="submit-btn">Login</button>
-        </form>
-      </div>
+    <!-- Match Details Modal -->
+    <div id="match-details-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('match-details-modal')">&times;</span>
+            <div id="match-details-content"></div>
+        </div>
     </div>
-  </div>
 
-  <!-- Toast Container -->
-  <div id="toastContainer"></div>
+    <!-- Start Match Modal -->
+    <div id="start-match-modal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal('start-match-modal')">&times;</span>
+            <h2>Start Match</h2>
+            
+            <div class="form-group">
+                <label>Batting Team:</label>
+                <select id="batting-team-select" onchange="onBattingTeamChange()"></select>
+            </div>
 
-  <script src="script.js"></script>
+            <div class="form-group">
+                <label>Batsman:</label>
+                <select id="batsman-select"></select>
+            </div>
+
+            <div class="form-group">
+                <label>Bowler:</label>
+                <select id="bowler-select"></select>
+            </div>
+
+            <button class="btn btn-success" onclick="startMatch()">Start Match</button>
+        </div>
+    </div>
+
+    <!-- Scoring Modal -->
+    <div id="scoring-modal" class="modal">
+        <div class="modal-content modal-large">
+            <span class="close" onclick="closeModal('scoring-modal')">&times;</span>
+            <h2>Live Scoring</h2>
+            
+            <div id="scoring-display" class="scoring-display"></div>
+
+            <div class="scoring-form">
+                <h3>Score This Ball</h3>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Runs (0-6):</label>
+                        <input type="number" id="runs-input" min="0" max="6" value="0">
+                    </div>
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="is-wicket" onchange="toggleWicketSelect()">
+                            Is Wicket?
+                        </label>
+                    </div>
+                </div>
+
+                <div id="wicket-select-div" style="display: none;">
+                    <div class="form-group">
+                        <label>Wicket Type:</label>
+                        <select id="wicket-type">
+                            <option value="">-- Select Type --</option>
+                            <option value="bowled">Bowled</option>
+                            <option value="lbw">LBW</option>
+                            <option value="caught">Caught</option>
+                            <option value="stumped">Stumped</option>
+                            <option value="run_out">Run Out</option>
+                        </select>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary" onclick="scoreRun()">Record This Ball</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="script.js"></script>
+    <script>
+        // Additional UI Functions
+        function switchAuthTab(tab) {
+            document.querySelectorAll('.auth-tab').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-buttons .tab-btn').forEach(el => el.classList.remove('active'));
+            
+            document.getElementById(tab + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        function toggleMemberTypeSelect() {
+            const type = document.getElementById('member-type').value;
+            document.getElementById('registered-member-div').style.display = type === 'registered' ? 'block' : 'none';
+            document.getElementById('manual-member-div').style.display = type === 'manual' ? 'block' : 'none';
+        }
+
+        function toggleWicketSelect() {
+            const isWicket = document.getElementById('is-wicket').checked;
+            document.getElementById('wicket-select-div').style.display = isWicket ? 'block' : 'none';
+        }
+
+        async function onBattingTeamChange() {
+            const teamId = document.getElementById('batting-team-select').value;
+            if (teamId) {
+                await loadTeamPlayersForSelect(teamId);
+            }
+        }
+
+        // Update user name in header
+        setInterval(() => {
+            if (currentUser) {
+                document.getElementById('user-name').textContent = `Hello, ${currentUser.name}`;
+            }
+        }, 1000);
+
+        // Modal close on outside click
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+            }
+        }
+    </script>
 </body>
 </html>

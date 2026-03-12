@@ -1,26 +1,25 @@
-// backend/routes/bookingRoutes.js
-
 const express = require("express");
 const {
   createBooking,
   getAllBookings,
   getUserBookings,
+  downloadUserBookingsReport,
   cancelBooking,
+  updatePaymentStatus,
+  getBillingSummary,
+  downloadBillingReport
 } = require("../controllers/bookingController");
-const { protect, admin } = require("../middleware/authMiddleware");
+const { protect, admin, adminOrTurfOwner } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// 🟢 Create a booking (User)
 router.post("/", protect, createBooking);
-
-// 🟢 Get user's own bookings
 router.get("/mybookings", protect, getUserBookings);
-
-// 🟢 Cancel a booking (User or Admin)
+router.get("/mybookings/report.csv", protect, downloadUserBookingsReport);
+router.get("/billing/summary", protect, adminOrTurfOwner, getBillingSummary);
+router.get("/billing/report.csv", protect, adminOrTurfOwner, downloadBillingReport);
+router.put("/:id/payment", protect, adminOrTurfOwner, updatePaymentStatus);
 router.put("/:id/cancel", protect, cancelBooking);
-
-// 🟢 Get all bookings (Admin only)
 router.get("/", protect, admin, getAllBookings);
 
 module.exports = router;
