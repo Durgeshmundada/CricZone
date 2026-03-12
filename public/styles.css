@@ -872,6 +872,7 @@ body {
   max-width: 360px;
 }
 
+<<<<<<< HEAD
 .content-grid-two {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -893,6 +894,8 @@ body {
   min-width: 170px;
 }
 
+=======
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
 .profile-card {
   border-radius: 16px;
   border: 1px solid rgba(19, 32, 36, 0.1);
@@ -1828,7 +1831,10 @@ body {
     margin-top: 0.5rem;
     padding-top: 0.6rem;
     justify-content: space-between;
+<<<<<<< HEAD
     flex-wrap: wrap;
+=======
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   }
 
   .user-email {
@@ -1849,10 +1855,13 @@ body {
     grid-template-columns: 1fr;
   }
 
+<<<<<<< HEAD
   .content-grid-two {
     grid-template-columns: 1fr;
   }
 
+=======
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   .stats-grid {
     grid-template-columns: 1fr;
   }
@@ -1864,11 +1873,14 @@ body {
   .wicket-buttons {
     grid-template-columns: 1fr;
   }
+<<<<<<< HEAD
 
   .form-actions-inline .submit-btn,
   .form-actions-inline .btn-secondary {
     width: 100%;
   }
+=======
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
 }
 
 @media (max-width: 680px) {

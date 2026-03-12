@@ -1,4 +1,6 @@
+// backend/routes/userRoutes.js
 const express = require("express");
+<<<<<<< HEAD
 const userController = require("../controllers/userController");
 const { protect, admin } = require("../middleware/authMiddleware");
 
@@ -11,5 +13,59 @@ router.get("/search-players", userController.searchPlayers);
 router.get("/profile", protect, userController.getProfile);
 router.put("/profile", protect, userController.updateProfile);
 router.get("/", protect, admin, userController.getAllUsers);
+=======
+const { 
+  registerUser, 
+  loginUser,
+  getUserProfile,
+  updateUserProfile,
+  getPlayerById,
+  searchPlayers,
+  getNearbyPlayers,
+  getTopBatsmen,
+  getTopBowlers,
+  getTopAllRounders,
+  updateUserRole,
+  followUser,
+  unfollowUser
+} = require("../controllers/userController");
+const { protect, authorizeRoles } = require("../middleware/authMiddleware");
+
+const router = express.Router();
+
+// ========== AUTHENTICATION ROUTES ==========
+router.post("/register", registerUser);
+router.post("/signup", registerUser); // Alias for register to match frontend
+router.post("/login", loginUser);
+
+// ========== PLAYER DISCOVERY & SEARCH (Feature #9: Looking) ==========
+// Public routes - anyone can search for players
+router.get("/search-players", searchPlayers);
+router.get("/nearby-players", getNearbyPlayers);
+
+// ========== LEADERBOARDS (Feature #6) ==========
+// Public routes - anyone can view leaderboards
+router.get("/leaderboard/batsmen", getTopBatsmen);
+router.get("/leaderboard/bowlers", getTopBowlers);
+router.get("/leaderboard/all-rounders", getTopAllRounders);
+
+// ========== USER PROFILE ROUTES ==========
+// Get specific player profile (public)
+router.get("/player/:id", getPlayerById);
+
+// Get own profile (protected)
+router.get("/profile", protect, getUserProfile);
+
+// Update own profile (protected)
+router.put("/profile", protect, updateUserProfile);
+
+// Admin only role management (for turf owner/admin/user assignment)
+router.put("/role", protect, authorizeRoles("admin"), updateUserRole);
+
+// ========== SOCIAL FEATURES (Feature #10: Community) ==========
+// Follow/Unfollow users (protected)
+router.post("/follow/:userId", protect, followUser);
+router.post("/unfollow/:userId", protect, unfollowUser);
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
 
 module.exports = router;

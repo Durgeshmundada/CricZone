@@ -9,6 +9,7 @@ Backend + frontend in one Node.js service, with Android wrapper in `mobile/`.
 3. Deploy on Render using the included `render.yaml`.
 4. Set Render env vars:
    - `MONGO_URI`
+<<<<<<< HEAD
    - `JWT_SECRET`
    - `CLIENT_URL` = `https://<your-service-name>.onrender.com`
 
@@ -16,6 +17,10 @@ Production note:
 - `CLIENT_URL` is required in production and can be comma-separated if you need multiple web origins.
 - The web app now defaults to same-origin `/api`, so a fresh deployment does not accidentally call an old hosted backend.
 
+=======
+   - `CLIENT_URL` = `https://<your-service-name>.onrender.com`
+
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
 Detailed guide: `SETUP_INSTRUCTIONS.md`
 
 ## Mobile app (install once)
@@ -31,6 +36,7 @@ APK output:
 - `mobile\CricZone-debug.apk`
 
 Users install once; later frontend updates are deployed to your site without reinstalling APK.
+<<<<<<< HEAD
 
 ## Local development
 
@@ -42,3 +48,5 @@ Users install once; later frontend updates are deployed to your site without rei
 npm install
 npm run dev
 ```
+=======
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878

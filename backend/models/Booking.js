@@ -40,12 +40,17 @@ const bookingSchema = new mongoose.Schema(
       required: true,
       min: 0
     },
+    slotHours: {
+      type: Number,
+      default: 1,
+    },
     status: {
       type: String,
       enum: ["booked", "cancelled"],
       default: "booked",
       index: true
     },
+<<<<<<< HEAD
     billing: {
       invoiceNumber: { type: String, required: true },
       paymentStatus: {
@@ -66,6 +71,40 @@ const bookingSchema = new mongoose.Schema(
       type: Date,
       default: null
     }
+=======
+    cancelledAt: {
+      type: Date,
+      default: null,
+    },
+    billing: {
+      invoiceNumber: {
+        type: String,
+        required: true,
+      },
+      currency: {
+        type: String,
+        default: "INR",
+      },
+      paymentStatus: {
+        type: String,
+        enum: ["pending", "paid", "refunded", "failed"],
+        default: "pending",
+      },
+      paymentMethod: {
+        type: String,
+        enum: ["cash", "upi", "card", "netbanking", "wallet", "other", null],
+        default: null,
+      },
+      paymentReference: {
+        type: String,
+        default: "",
+      },
+      paidAt: {
+        type: Date,
+        default: null,
+      },
+    },
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   },
   { timestamps: true }
 );
