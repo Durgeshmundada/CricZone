@@ -777,12 +777,20 @@ async function loadHostTeams() {
   const token = localStorage.getItem("token");
   const teamASelect = document.getElementById("teamASelect");
   const teamBSelect = document.getElementById("teamBSelect");
+<<<<<<< HEAD
 
   if (!token) {
     hostTeamsCache = [];
     if (teamASelect && teamBSelect) {
       setHostTeamSelectOptions([]);
     }
+=======
+  if (!teamASelect || !teamBSelect) return;
+
+  if (!token) {
+    hostTeamsCache = [];
+    setHostTeamSelectOptions([]);
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
     return;
   }
 
@@ -796,11 +804,17 @@ async function loadHostTeams() {
     }
 
     hostTeamsCache = Array.isArray(payload.json.data) ? payload.json.data : [];
+<<<<<<< HEAD
     if (teamASelect && teamBSelect) {
       setHostTeamSelectOptions(hostTeamsCache);
       renderTeamPlayingSelector("A");
       renderTeamPlayingSelector("B");
     }
+=======
+    setHostTeamSelectOptions(hostTeamsCache);
+    renderTeamPlayingSelector("A");
+    renderTeamPlayingSelector("B");
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   } catch (error) {
     console.error("Load reusable teams error:", error);
     showToast(error.message || "Failed to load saved teams", "error");
@@ -3734,6 +3748,7 @@ document.addEventListener("DOMContentLoaded", async () => {
       const password = document.getElementById('signupPassword').value.trim();
       const submitBtn = signupForm.querySelector('.submit-btn');
       
+<<<<<<< HEAD
       if (!name || !email || !password) {
         showToast('Please fill the required fields', 'error');
         return;
@@ -3741,6 +3756,15 @@ document.addEventListener("DOMContentLoaded", async () => {
       
       if (password.length < 8) {
         showToast('Password must be at least 8 characters', 'error');
+=======
+      if (!name || !email || !phone || !password) {
+        showToast('Please fill all fields', 'error');
+        return;
+      }
+      
+      if (password.length < 6) {
+        showToast('Password must be at least 6 characters', 'error');
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
         return;
       }
       

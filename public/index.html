@@ -4,11 +4,23 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <meta name="description" content="CricZone helps you host local cricket matches, run live scoring, manage tournaments, and book turfs." />
+<<<<<<< HEAD
+=======
+  <meta name="theme-color" content="#0b7a4b" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="CricZone" />
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   <title>CricZone | Local Cricket Control Center</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b7a4b'/%3E%3Cpath d='M42 20c-3-4-10-5-15-2l2 4c4-2 8-1 10 2 2 4-1 10-6 12-4 2-8 1-11-2l-3 3c4 5 12 6 18 3 7-4 10-13 5-20Z' fill='white'/%3E%3C/svg%3E" />
+<<<<<<< HEAD
+=======
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -34,6 +46,7 @@
           <li><a class="nav-link" data-page="host-match">Host Match</a></li>
           <li><a class="nav-link" data-page="my-matches">My Matches</a></li>
           <li><a class="nav-link" data-page="tournaments">Tournaments</a></li>
+<<<<<<< HEAD
           <li><a class="nav-link" data-page="billing">Billing</a></li>
           <li><a class="nav-link" data-page="my-stats">My Stats</a></li>
           <li><a class="nav-link" data-page="book-turf">Book Turf</a></li>
@@ -42,6 +55,15 @@
         <div class="nav-actions">
           <button id="installAppBtn" class="btn-logout" type="button" style="display: none;">Install App</button>
           <button id="navApiConfig" class="btn-logout nav-api-btn" type="button" style="display: none;">API Settings</button>
+=======
+          <li><a class="nav-link" data-page="my-stats">My Stats</a></li>
+          <li><a class="nav-link" data-page="book-turf">Book Turf</a></li>
+          <li><a class="nav-link" data-page="billing">Billing</a></li>
+        </ul>
+
+        <div class="nav-actions">
+          <button id="navApiConfig" class="btn-logout nav-api-btn" type="button" style="display: none">API URL</button>
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
           <div class="nav-auth" id="navAuth" style="display: none">
             <span id="navUserEmail" class="user-email"></span>
             <button id="logoutBtn" class="btn-logout">Logout</button>
@@ -53,6 +75,10 @@
   </nav>
 
   <div id="toastContainer" class="toast-container"></div>
+<<<<<<< HEAD
+=======
+  <button id="installAppBtn" class="install-app-btn" type="button" style="display: none;">Install App</button>
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
 
   <div id="customModal" class="custom-modal">
     <div class="modal-overlay"></div>
@@ -84,7 +110,10 @@
           </p>
           <div class="hero-buttons">
             <button class="btn-primary" data-page="host-match">Host a Match</button>
+<<<<<<< HEAD
             <button class="btn-secondary" data-page="teams">Manage Teams</button>
+=======
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
             <button class="btn-secondary" data-page="book-turf">Book a Turf</button>
           </div>
           <div class="hero-metrics">
@@ -152,7 +181,11 @@
       <div class="section-head reveal">
         <p class="section-tag">Organizer Tools</p>
         <h2 class="section-title">Host a Match</h2>
+<<<<<<< HEAD
         <p class="section-description">Create teams, set overs, and publish a new fixture for live scoring.</p>
+=======
+        <p class="section-description">Pick saved teams or enter custom lineups, then publish a fixture for live scoring.</p>
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
       </div>
 
       <div class="form-card reveal">
@@ -181,6 +214,20 @@
 
           <div class="form-row">
             <div class="form-group">
+<<<<<<< HEAD
+=======
+              <label>Team A Name</label>
+              <input type="text" id="teamAName" placeholder="Team A" required />
+            </div>
+            <div class="form-group">
+              <label>Team B Name</label>
+              <input type="text" id="teamBName" placeholder="Team B" required />
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
               <label>Saved Team A (Optional)</label>
               <select id="teamASelect">
                 <option value="">Custom (manual entry)</option>
@@ -194,6 +241,7 @@
             </div>
           </div>
 
+<<<<<<< HEAD
           <div class="form-row">
             <div class="form-group">
               <label>Team A Name</label>
@@ -205,6 +253,8 @@
             </div>
           </div>
 
+=======
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
           <div class="form-group">
             <label>Team A Players (comma-separated)</label>
             <input type="text" id="teamAPlayers" placeholder="Virat|virat@email.com, Rahul, Player3" />
@@ -237,10 +287,19 @@
             </select>
           </div>
 
+<<<<<<< HEAD
           <div class="form-actions-inline">
             <button type="button" id="balanceTeamsBtn" class="btn-secondary">Balance Teams</button>
             <button type="submit" class="submit-btn">Create Match</button>
           </div>
+=======
+          <div class="form-row">
+            <button type="button" id="balanceTeamsBtn" class="btn-secondary">Random Distribute by Stats</button>
+            <div></div>
+          </div>
+
+          <button type="submit" class="submit-btn">Create Match</button>
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
         </form>
       </div>
     </div>
@@ -249,6 +308,7 @@
   <div id="teams" class="page">
     <div class="container page-shell">
       <div class="section-head reveal">
+<<<<<<< HEAD
         <p class="section-tag">Squad Operations</p>
         <h2 class="section-title">Reusable Teams</h2>
         <p class="section-description">Build reusable squads, accept invitations, and quickly pull players into new matches.</p>
@@ -285,6 +345,45 @@
         </div>
         <div id="teamPlayerSuggestions" class="players-grid">
           <p class="loading-text">Search for players to add into reusable teams.</p>
+=======
+        <p class="section-tag">Squad Management</p>
+        <h2 class="section-title">My Teams</h2>
+        <p class="section-description">Create reusable teams now, verify invites, and use them later in matches or tournaments.</p>
+      </div>
+
+      <div class="form-card reveal">
+        <h2 class="form-title">Create Reusable Team</h2>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Team Name</label>
+            <input type="text" id="newReusableTeamName" placeholder="e.g., Mumbai Warriors" />
+          </div>
+          <div class="form-group">
+            <label>Team Players</label>
+            <input type="text" id="newReusableTeamPlayers" placeholder="Player1|mail, Player2, Player3" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Suggest Players To Add</label>
+          <div class="form-row">
+            <input type="text" id="teamPlayerSuggestionQuery" placeholder="Search player by name or email" />
+            <button type="button" id="searchTeamSuggestionsBtn" class="btn-secondary">Find Players</button>
+          </div>
+          <div id="teamPlayerSuggestions" class="players-grid">
+            <p class="loading-text">Search to load suggestions.</p>
+          </div>
+        </div>
+
+        <button type="button" id="createReusableTeamBtn" class="submit-btn">Save Reusable Team</button>
+      </div>
+
+      <div class="form-card reveal" style="margin-top: 1rem;">
+        <h2 class="form-title">Pending Team Verifications</h2>
+        <p class="section-description">If someone added your account to a team, accept or reject here.</p>
+        <div id="teamInvitationsList">
+          <p class="loading-text">No pending invitations.</p>
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
         </div>
       </div>
     </div>
@@ -384,6 +483,7 @@
     </div>
   </div>
 
+<<<<<<< HEAD
   <div id="billing" class="page">
     <div class="container page-shell">
       <div class="section-head reveal">
@@ -442,6 +542,8 @@
     </div>
   </div>
 
+=======
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   <div id="book-turf" class="page">
     <div class="container page-shell">
       <div class="section-head reveal">
@@ -456,6 +558,65 @@
     </div>
   </div>
 
+<<<<<<< HEAD
+=======
+  <div id="billing" class="page">
+    <div class="container page-shell">
+      <div class="section-head reveal">
+        <p class="section-tag">Finance Center</p>
+        <h2 class="section-title">Billing</h2>
+        <p class="section-description">Track invoices, payment status, and download billing reports.</p>
+      </div>
+
+      <div class="billing-controls reveal">
+        <div class="form-row">
+          <div class="form-group">
+            <label>From Date</label>
+            <input type="date" id="billingFromDate" />
+          </div>
+          <div class="form-group">
+            <label>To Date</label>
+            <input type="date" id="billingToDate" />
+          </div>
+        </div>
+        <div class="form-row">
+          <button type="button" id="refreshBillingBtn" class="submit-btn">Refresh Billing</button>
+          <button type="button" id="downloadBillingBtn" class="btn-secondary">Download CSV</button>
+        </div>
+      </div>
+
+      <div id="billingSummaryCards" class="stats-grid reveal">
+        <div class="stat-card"><h4>Booked</h4><p>0</p></div>
+        <div class="stat-card"><h4>Paid</h4><p>0</p></div>
+        <div class="stat-card"><h4>Pending</h4><p>0</p></div>
+      </div>
+
+      <div class="scoreboard-panel reveal billing-table-panel">
+        <h3>Invoices</h3>
+        <div class="table-wrap">
+          <table class="score-table billing-table">
+            <thead>
+              <tr>
+                <th>Invoice</th>
+                <th>Turf</th>
+                <th>User</th>
+                <th>Slot</th>
+                <th>Amount</th>
+                <th>Booking</th>
+                <th>Payment</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="billingTableBody">
+              <tr><td colspan="8">Load billing data to view invoices.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   <div id="login" class="page">
     <div class="container page-shell">
       <div class="form-card auth-card reveal">
@@ -463,12 +624,20 @@
         <form id="loginForm">
           <div class="form-group">
             <label>Email</label>
+<<<<<<< HEAD
             <input type="email" id="loginEmail" placeholder="Enter your email" autocomplete="email" required />
+=======
+            <input type="email" id="loginEmail" placeholder="Enter your email" required />
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
           </div>
 
           <div class="form-group">
             <label>Password</label>
+<<<<<<< HEAD
             <input type="password" id="loginPassword" placeholder="Enter your password" autocomplete="current-password" required />
+=======
+            <input type="password" id="loginPassword" placeholder="Enter your password" required />
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
           </div>
 
           <button type="submit" class="submit-btn">Login</button>
@@ -487,22 +656,38 @@
         <form id="signupForm">
           <div class="form-group">
             <label>Name</label>
+<<<<<<< HEAD
             <input type="text" id="signupName" placeholder="Enter your name" autocomplete="name" required />
+=======
+            <input type="text" id="signupName" placeholder="Enter your name" required />
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
           </div>
 
           <div class="form-group">
             <label>Email</label>
+<<<<<<< HEAD
             <input type="email" id="signupEmail" placeholder="Enter your email" autocomplete="email" required />
+=======
+            <input type="email" id="signupEmail" placeholder="Enter your email" required />
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
           </div>
 
           <div class="form-group">
             <label>Phone</label>
+<<<<<<< HEAD
             <input type="tel" id="signupPhone" placeholder="Enter your phone number (optional)" autocomplete="tel" />
+=======
+            <input type="tel" id="signupPhone" placeholder="Enter your phone number" required />
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
           </div>
 
           <div class="form-group">
             <label>Password</label>
+<<<<<<< HEAD
             <input type="password" id="signupPassword" placeholder="Create a password (min 8 characters)" minlength="8" autocomplete="new-password" required />
+=======
+            <input type="password" id="signupPassword" placeholder="Create a password (min 6 characters)" required />
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
           </div>
 
           <button type="submit" class="submit-btn">Sign Up</button>
@@ -563,11 +748,76 @@
         <p id="bowlingSquadHint">Bowling options: not loaded</p>
       </div>
 
+<<<<<<< HEAD
+=======
+      <div class="match-meta">
+        <p id="tossInfo">Toss: not set</p>
+        <p id="inningsInfo">Innings: 1st</p>
+        <p id="targetInfo">Target: N/A</p>
+      </div>
+
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
       <div class="over-display">
         <p>Current Over:</p>
         <div id="overBalls" class="over-balls"></div>
       </div>
 
+<<<<<<< HEAD
+=======
+      <div class="detailed-scoreboard">
+        <div class="scoreboard-panel">
+          <h3>Batting</h3>
+          <div class="table-wrap">
+            <table class="score-table">
+              <thead>
+                <tr>
+                  <th>Batsman</th>
+                  <th>R</th>
+                  <th>B</th>
+                  <th>4s</th>
+                  <th>6s</th>
+                  <th>SR</th>
+                  <th>Dismissal</th>
+                </tr>
+              </thead>
+              <tbody id="batsmanStatsBody">
+                <tr><td colspan="7">No batting data yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="scoreboard-panel">
+          <h3>Bowling</h3>
+          <div class="table-wrap">
+            <table class="score-table">
+              <thead>
+                <tr>
+                  <th>Bowler</th>
+                  <th>O</th>
+                  <th>R</th>
+                  <th>W</th>
+                  <th>Eco</th>
+                  <th>WD</th>
+                  <th>NB</th>
+                </tr>
+              </thead>
+              <tbody id="bowlerStatsBody">
+                <tr><td colspan="7">No bowling data yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="scoreboard-panel">
+          <h3>Fall of Wickets</h3>
+          <ul id="fallOfWicketsList" class="fow-list">
+            <li>No wickets yet.</li>
+          </ul>
+        </div>
+      </div>
+
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
       <div class="scoring-pad">
         <h3>Record Ball</h3>
 
@@ -592,6 +842,7 @@
           <button id="undoBtn" class="undo-btn">UNDO</button>
         </div>
       </div>
+<<<<<<< HEAD
 
       <div class="detailed-scoreboard">
         <div class="scoreboard-panel">
@@ -656,6 +907,8 @@
           </ul>
         </div>
       </div>
+=======
+>>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
     </div>
   </div>
 
