@@ -12,7 +12,7 @@ mobile/node_modules/
 .env.*
 !.env.example
 !backend/.env.example
-!backend/.env
+backend/.env
 
 # Logs
 logs/

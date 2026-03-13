@@ -1,5 +1,6 @@
 const fs = require("fs");
 const path = require("path");
+const vm = require("vm");
 
 const projectRoot = path.resolve(__dirname, "..", "..");
 const publicIndexPath = path.join(projectRoot, "public", "index.html");
@@ -48,5 +49,14 @@ describe("public app shell contracts", () => {
 
     expect(runtimeConfig).toContain('window.__API_BASE__ = ""');
     expect(runtimeConfig).not.toMatch(/https?:\/\/[^\s"]+/i);
+  });
+
+  test("shipped script parses and defaults to same-origin API configuration", () => {
+    const script = fs.readFileSync(publicScriptPath, "utf8");
+
+    expect(() => new vm.Script(script, { filename: "public/script.js" })).not.toThrow();
+    expect(script).toContain('const DEFAULT_API_BASE = ""');
+    expect(script).toContain("window.location.origin");
+    expect(script).not.toContain("https://criczone-app.onrender.com/api");
   });
 });

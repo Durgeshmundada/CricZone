@@ -1,3 +1,24 @@
+// Google Analytics event tracking utility
+function trackEvent(eventName, params = {}) {
+  if (typeof gtag === 'function') {
+    gtag('event', eventName, params);
+  }
+}
+
+// Persistent error banner utility
+function showErrorBanner(message) {
+  const banner = document.getElementById('errorBanner');
+  if (!banner) return;
+  banner.textContent = message;
+  banner.style.display = 'block';
+}
+
+function hideErrorBanner() {
+  const banner = document.getElementById('errorBanner');
+  if (!banner) return;
+  banner.style.display = 'none';
+}
+
 const normalizeApiBase = (value = "") => String(value || "").trim().replace(/\/+$/, "");
 
 const isNativePlatform = () => {
@@ -20,47 +41,7 @@ const readStoredApiBase = () => {
   }
 };
 
-const API_BASE = (() => {
-  const stored = readStoredApiBase();
-  if (stored) return stored;
-
-  const { protocol, hostname, origin, port } = window.location;
-  const isHttp = protocol === "http:" || protocol === "https:";
-  const isLocalhost = hostname === "localhost" || hostname === "127.0.0.1";
-  const frontendDevPorts = new Set(["3000", "5173", "5500"]);
-  const override = normalizeApiBase(window.__API_BASE__);
-  const isLocalOverride = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/api$/i.test(override);
-
-  // In local web testing, prefer local backend instead of committed remote runtime config.
-  if (isHttp && isLocalhost && !isNativePlatform()) {
-    if (override && isLocalOverride) {
-      return override;
-    }
-    if (frontendDevPorts.has(port)) {
-      return `${protocol}//${hostname}:5000/api`;
-    }
-    return `${origin}/api`;
-  }
-
-  if (override) {
-    const isSecureWeb = window.location.protocol === "https:" && !isNativePlatform();
-    const isInsecureOverride = /^http:\/\//i.test(override);
-    // Prevent broken production deploys caused by committed local http API overrides.
-    if (!(isSecureWeb && isInsecureOverride)) {
-      return override;
-    }
-  }
-
-  if (isHttp && isLocalhost && frontendDevPorts.has(port)) {
-    return `${protocol}//${hostname}:5000/api`;
-  }
-
-  if (isHttp) {
-    return `${origin}/api`;
-  }
-
-  return "";
-})();
+const DEFAULT_API_BASE = "";
 const homeSnapshot = { matches: [], tournaments: [] };
 let hostTeamsCache = [];
 let revealTimeouts = [];
@@ -84,10 +65,24 @@ const normalizeApiInput = (inputValue = "") => {
   return normalized;
 };
 
+const getSameOriginApiBase = () => {
+  try {
+    if (typeof window === "undefined" || !window.location || !window.location.origin) {
+      return "";
+    }
+    return normalizeApiBase(`${window.location.origin}/api`);
+  } catch (_error) {
+    return "";
+  }
+};
+
 const getCurrentApiBase = () =>
   normalizeApiBase(window.__API_BASE__) ||
   readStoredApiBase() ||
-  normalizeApiBase(API_BASE);
+  getSameOriginApiBase() ||
+  normalizeApiBase(DEFAULT_API_BASE);
+
+const API_BASE = getCurrentApiBase();
 
 const saveApiBase = (apiBase) => {
   const normalized = normalizeApiInput(apiBase);
@@ -144,7 +139,16 @@ const readResponsePayload = async (response) => {
   }
 
   try {
-    return { text, json: JSON.parse(text) };
+    const json = JSON.parse(text);
+    // Token expiry handling
+    if (json && (json.error === "Token expired" || json.message === "Token expired")) {
+      showErrorBanner("Session expired. Please log in again.");
+      setTimeout(() => {
+        hideErrorBanner();
+        showPage && showPage("login");
+      }, 2000);
+    }
+    return { text, json };
   } catch (_error) {
     return { text, json: null };
   }
@@ -240,71 +244,8 @@ function setupInstallPrompt() {
 }
 
 async function ensureNativeApiBaseConfigured() {
-  if (!isNativePlatform()) return true;
-  const currentApiBase = getCurrentApiBase();
-
-  const runApiSetupFlow = async (initialValue = "") => {
-    await modal.alert(
-      "Backend Setup Required",
-      "Enter backend API URL (example: https://your-domain.com/api)."
-    );
-
-    while (true) {
-      const input = await modal.prompt(
-        "Backend API URL",
-        "Use full URL with http/https. If you enter only domain, /api will be added automatically.",
-        initialValue || "https://your-domain.com/api"
-      );
-
-      if (!input) {
-        await modal.alert("Setup Required", "This mobile app needs a backend API URL.");
-        continue;
-      }
-
-      const normalized = normalizeApiInput(input);
-      if (!normalized) {
-        await modal.alert("Invalid URL", "URL must start with http:// or https://");
-        continue;
-      }
-
-      const health = await checkApiHealth(normalized);
-      if (!health.ok) {
-        await modal.alert(
-          "Connection Failed",
-          `Could not reach backend.\n\nURL: ${normalized}\nError: ${health.error}`
-        );
-        continue;
-      }
-
-      if (!saveApiBase(normalized)) {
-        await modal.alert("Storage Error", "Could not save API URL on this device.");
-        continue;
-      }
-
-      await modal.alert("Saved", "API URL saved. App will reload now.");
-      window.location.reload();
-      return false;
-    }
-  };
-
-  if (!currentApiBase) {
-    return runApiSetupFlow("");
-  }
-
-  const health = await checkApiHealth(currentApiBase);
-  if (health.ok) return true;
-
-  const shouldUpdate = await modal.confirm(
-    "Backend Not Reachable",
-    `Current URL: ${currentApiBase}\n\nError: ${health.error}\n\nDo you want to update API URL now?`
-  );
-
-  if (!shouldUpdate) {
-    showToast("Backend not reachable. Some sections may fail to load.", "error");
-    return true;
-  }
-
-  return runApiSetupFlow(currentApiBase);
+  // No-op: always return true, API base is hardcoded
+  return true;
 }
 
 async function openApiSettings() {
@@ -1296,22 +1237,45 @@ function setupMobileNavigation() {
 
   if (!navMenu || !menuToggle) return;
 
-  menuToggle.addEventListener("click", () => {
-    const nextOpen = !navMenu.classList.contains("open");
-    navMenu.classList.toggle("open", nextOpen);
-    menuToggle.classList.toggle("is-active", nextOpen);
-    menuToggle.setAttribute("aria-expanded", nextOpen ? "true" : "false");
+  // Add close button for mobile menu if not present
+  let closeBtn = navMenu.querySelector('.nav-menu-close');
+  if (!closeBtn) {
+    closeBtn = document.createElement('button');
+    closeBtn.className = 'nav-menu-close';
+    closeBtn.setAttribute('aria-label', 'Close navigation');
+    closeBtn.innerHTML = '&times;';
+    closeBtn.style.display = 'none';
+    navMenu.insertBefore(closeBtn, navMenu.firstChild);
+  }
+
+  function setMenuActive(active) {
+    navMenu.classList.toggle('active', active);
+    menuToggle.classList.toggle('is-active', active);
+    menuToggle.setAttribute('aria-expanded', active ? 'true' : 'false');
+    closeBtn.style.display = active ? 'block' : 'none';
+  }
+
+  menuToggle.addEventListener('click', () => {
+    const nextActive = !navMenu.classList.contains('active');
+    setMenuActive(nextActive);
   });
 
-  document.addEventListener("click", (event) => {
+  closeBtn.addEventListener('click', () => setMenuActive(false));
+
+  // Only close menu on outside click if menu is open and on mobile
+  document.addEventListener('click', (event) => {
+    if (!navMenu.classList.contains('active')) return;
     const clickedInsideMenu = navMenu.contains(event.target) || menuToggle.contains(event.target);
-    if (!clickedInsideMenu) closeNavMenu();
+    if (!clickedInsideMenu) setMenuActive(false);
   });
 
-  navBrand?.addEventListener("keydown", (event) => {
-    if (event.key === "Enter" || event.key === " ") {
+  // Accessibility: allow navBrand to be focused and activated
+  navBrand?.setAttribute('tabindex', '0');
+  navBrand?.setAttribute('role', 'button');
+  navBrand?.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' || event.key === ' ') {
       event.preventDefault();
-      showPage("home");
+      showPage('home');
     }
   });
 }
@@ -1383,10 +1347,18 @@ function showPage(pageId) {
   });
   closeNavMenu();
   
-  if (pageId === "home") loadHomePage();
+  if (pageId === "home") {
+    const liveMatchesGrid = document.getElementById('liveMatchesGrid');
+    if (liveMatchesGrid) liveMatchesGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    loadHomePage();
+  }
   if (pageId === "book-turf") loadTurfs();
   if (pageId === "my-stats") loadUserProfile();
-  if (pageId === "my-matches") loadMyMatches();
+  if (pageId === "my-matches") {
+    const myMatchesGrid = document.getElementById('myMatchesGrid');
+    if (myMatchesGrid) myMatchesGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    loadMyMatches();
+  }
   if (pageId === "players") loadPlayers();
   if (pageId === "billing") loadBillingDashboard();
   if (pageId === "host-match") {
@@ -3230,6 +3202,11 @@ async function loadTournamentOptions() {
   if (!tournamentSelect) return;
   
   try {
+    tournamentSelect.innerHTML = '<option value="">Loading...</option>';
+    const tournamentsGrid = document.getElementById('tournamentsGrid');
+    if (tournamentsGrid) {
+      tournamentsGrid.innerHTML = '<div class="loading-spinner"><div class="spinner"></div></div>';
+    }
     const res = await fetch(`${API_BASE}/tournaments`);
     const data = await res.json();
     if (res.ok && data.tournaments) {
@@ -3239,8 +3216,16 @@ async function loadTournamentOptions() {
           tournamentSelect.innerHTML += `<option value="${t._id}">${escapeHtml(t.name)}</option>`;
         }
       });
+      hideErrorBanner();
+      if (tournamentsGrid) tournamentsGrid.innerHTML = '';
+    } else {
+      showErrorBanner("Failed to load tournaments from server.");
+      if (tournamentsGrid) tournamentsGrid.innerHTML = '<p class="loading-text">Failed to load tournaments.</p>';
     }
   } catch (err) {
+    showErrorBanner("Network error: Unable to load tournaments.");
+    const tournamentsGrid = document.getElementById('tournamentsGrid');
+    if (tournamentsGrid) tournamentsGrid.innerHTML = '<p class="loading-text">Network error.</p>';
     console.error("Failed to load tournaments:", err);
   }
 }
@@ -3249,10 +3234,16 @@ async function fetchCurrentUserTeamsForTournament() {
   if (!isLoggedIn()) return [];
 
   if (Array.isArray(hostTeamsCache) && hostTeamsCache.length > 0) {
+    hideErrorBanner();
     return hostTeamsCache;
   }
 
-  await loadHostTeams();
+  try {
+    await loadHostTeams();
+    hideErrorBanner();
+  } catch (err) {
+    showErrorBanner("Network error: Unable to load your teams.");
+  }
   return Array.isArray(hostTeamsCache) ? hostTeamsCache : [];
 }
 
@@ -3561,7 +3552,9 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   // Logout
   const logoutBtn = document.getElementById("logoutBtn");
-  logoutBtn?.addEventListener("click", () => {
+  logoutBtn?.addEventListener("click", async () => {
+    const confirmed = await modal.confirm("Logout", "Are you sure you want to log out?");
+    if (!confirmed) return;
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUserFromStorage();
@@ -3658,28 +3651,43 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (loginForm) {
     loginForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const email = document.getElementById('loginEmail').value.trim();
-      const password = document.getElementById('loginPassword').value.trim();
+      const emailInput = document.getElementById('loginEmail');
+      const passwordInput = document.getElementById('loginPassword');
+      const email = emailInput.value.trim();
+      const password = passwordInput.value.trim();
       const submitBtn = loginForm.querySelector('.submit-btn');
-      
-      if (!email || !password) {
-        showToast('Please enter email and password', 'error');
+
+      // Remove previous invalid highlights
+      emailInput.classList.remove('invalid');
+      passwordInput.classList.remove('invalid');
+
+      let hasError = false;
+      if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+        emailInput.classList.add('invalid');
+        hasError = true;
+      }
+      if (!password || password.length < 6) {
+        passwordInput.classList.add('invalid');
+        hasError = true;
+      }
+      if (hasError) {
+        showToast('Please enter a valid email and password (min 6 chars)', 'error');
         return;
       }
-      
+
       try {
         submitBtn.textContent = 'Logging in...';
         submitBtn.disabled = true;
-        
+
         const response = await fetch(`${API_BASE}/users/login`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
           body: JSON.stringify({ email, password })
         });
-        
+
         const payload = await readResponsePayload(response);
         const data = payload.json;
 
@@ -3700,7 +3708,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
           showToast('Login successful.', 'success');
           setUserFromStorage();
-          
+
           setTimeout(() => {
             showPage('home');
           }, 1500);
@@ -3727,36 +3735,57 @@ document.addEventListener("DOMContentLoaded", async () => {
   if (signupForm) {
     signupForm.addEventListener('submit', async (e) => {
       e.preventDefault();
-      const name = document.getElementById('signupName').value.trim();
-      const email = document.getElementById('signupEmail').value.trim();
-      const phone = document.getElementById('signupPhone').value.trim();
-      const password = document.getElementById('signupPassword').value.trim();
+      const nameInput = document.getElementById('signupName');
+      const emailInput = document.getElementById('signupEmail');
+      const phoneInput = document.getElementById('signupPhone');
+      const passwordInput = document.getElementById('signupPassword');
+      const name = nameInput.value.trim();
+      const email = emailInput.value.trim();
+      const phone = phoneInput.value.trim();
+      const password = passwordInput.value.trim();
       const submitBtn = signupForm.querySelector('.submit-btn');
-      
-      if (!name || !email || !phone || !password) {
-        showToast('Please fill all fields', 'error');
-        return;
-      }
-      
-      if (password.length < 6) {
-        showToast('Password must be at least 6 characters', 'error');
 
+      // Remove previous invalid highlights
+      nameInput.classList.remove('invalid');
+      emailInput.classList.remove('invalid');
+      phoneInput.classList.remove('invalid');
+      passwordInput.classList.remove('invalid');
+
+      let hasError = false;
+      if (!name) {
+        nameInput.classList.add('invalid');
+        hasError = true;
+      }
+      if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+        emailInput.classList.add('invalid');
+        hasError = true;
+      }
+      if (!phone || !/^[0-9]{10,15}$/.test(phone)) {
+        phoneInput.classList.add('invalid');
+        hasError = true;
+      }
+      if (!password || password.length < 6) {
+        passwordInput.classList.add('invalid');
+        hasError = true;
+      }
+      if (hasError) {
+        showToast('Please fill all fields correctly.', 'error');
         return;
       }
-      
+
       try {
         submitBtn.textContent = 'Signing up...';
         submitBtn.disabled = true;
-        
+
         const response = await fetch(`${API_BASE}/users/signup`, {
           method: 'POST',
-          headers: { 
+          headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
           },
           body: JSON.stringify({ name, email, phone, password })
         });
-        
+
         const payload = await readResponsePayload(response);
         const data = payload.json;
 
@@ -4003,22 +4032,17 @@ document.addEventListener("DOMContentLoaded", async () => {
                 headers: {
                   "Content-Type": "application/json",
                   Authorization: `Bearer ${token}`
-                },
-                body: JSON.stringify({
-                  teamId: myRegisteredTeam.teamId?._id || myRegisteredTeam.teamId || null,
-                  teamName: myRegisteredTeam.teamName || ""
-                })
+                }
               });
-
               const unregisterPayload = await readResponsePayload(responseUnregister);
               if (!responseUnregister.ok || !unregisterPayload?.json?.success) {
-                throw new Error(getReadableResponseError(responseUnregister, unregisterPayload, "Failed to unregister team"));
+                throw new Error(
+                  getReadableResponseError(responseUnregister, unregisterPayload, "Failed to unregister team")
+                );
               }
-
               showToast(unregisterPayload.json.message || "Team unregistered", "success");
-              await loadTournamentsList();
+              loadTournamentsList();
             } catch (error) {
-              console.error("Tournament unregister error:", error);
               showToast(error.message || "Failed to unregister team", "error");
             }
           });
@@ -4026,33 +4050,10 @@ document.addEventListener("DOMContentLoaded", async () => {
           grid.appendChild(card);
         });
       } else {
-        tournamentsList.innerHTML = '<p style="text-align:center;">No tournaments available yet.</p>';
+        tournamentsList.innerHTML = '<p class="loading-text">No tournaments found.</p>';
       }
     } catch (err) {
-      console.error("Error loading tournaments:", err);
-      tournamentsList.innerHTML = '<p style="text-align:center;">Failed to load tournaments.</p>';
+      tournamentsList.innerHTML = '<p class="loading-text">Failed to load tournaments.</p>';
     }
   }
-
-  // Load tournaments on tournaments page
-  const tournamentsPage = document.getElementById("tournaments");
-  if (tournamentsPage) {
-    const observer = new MutationObserver(() => {
-      if (tournamentsPage.style.display !== 'none') {
-        loadTournamentsList();
-      }
-    });
-    observer.observe(tournamentsPage, { attributes: true, attributeFilter: ['style'] });
-  }
 });
-
-
-
-
-
-
-
-
-
-
-
