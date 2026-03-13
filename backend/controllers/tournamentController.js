@@ -1,43 +1,3 @@
-<<<<<<< HEAD
-const Tournament = require("../models/Tournament");
-const { asyncHandler, createError, sendSuccess } = require("../utils/http");
-
-const REGISTRATION_OPEN_STATES = new Set(["upcoming", "registration_open"]);
-
-const presentTournament = (tournament) => ({
-  _id: tournament._id,
-  name: tournament.name,
-  description: tournament.description,
-  startDate: tournament.startDate,
-  endDate: tournament.endDate,
-  venue: tournament.venue,
-  format: tournament.format,
-  maxTeams: tournament.maxTeams,
-  minPlayers: tournament.minPlayers,
-  maxPlayers: tournament.maxPlayers,
-  registeredTeams: tournament.registeredTeams,
-  status: tournament.status,
-  createdBy: tournament.createdBy,
-  matches: tournament.matches,
-  winner: tournament.winner,
-  prizePool: tournament.prizePool,
-  createdAt: tournament.createdAt,
-  updatedAt: tournament.updatedAt
-});
-
-exports.createTournament = asyncHandler(async (req, res) => {
-  const name = String(req.body.name || "").trim();
-  const venue = String(req.body.venue || "").trim();
-  const startDate = new Date(req.body.startDate);
-  const endDate = new Date(req.body.endDate);
-  const maxTeams = Number.parseInt(req.body.maxTeams, 10);
-  const minPlayers = Number.parseInt(req.body.minPlayers, 10);
-  const maxPlayers = Number.parseInt(req.body.maxPlayers, 10);
-
-  if (!name || !venue || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime())) {
-    throw createError(400, "Tournament name, venue, start date, and end date are required");
-=======
-// backend/controllers/tournamentController.js
 const mongoose = require("mongoose");
 const Tournament = require("../models/Tournament");
 const Team = require("../models/Team");
@@ -167,7 +127,6 @@ exports.createTournament = async (req, res) => {
       rules
     } = req.body;
 
-    // Validation
     if (!name || !startDate || !endDate || !venue) {
       return res.status(400).json({ 
         success: false,
@@ -175,7 +134,6 @@ exports.createTournament = async (req, res) => {
       });
     }
 
-    // Date validation
     if (new Date(startDate) >= new Date(endDate)) {
       return res.status(400).json({ 
         success: false,
@@ -203,7 +161,6 @@ exports.createTournament = async (req, res) => {
         }
       : prizePool;
 
-    // Initialize standings array
     const standings = [];
 
     const tournament = await Tournament.create({
@@ -236,19 +193,14 @@ exports.createTournament = async (req, res) => {
     });
   } catch (error) {
     return sendServerError(res, "Failed to create tournament", error);
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   }
+};
 
-<<<<<<< HEAD
-  if (endDate < startDate) {
-    throw createError(400, "End date must be on or after start date");
-=======
 // Get all tournaments
 exports.getAllTournaments = async (req, res) => {
   try {
     const { status, type, upcoming } = req.query;
     
-    // Build filter
     const filter = {};
     if (status) filter.status = status;
     if (type) filter.tournamentType = type;
@@ -273,23 +225,9 @@ exports.getAllTournaments = async (req, res) => {
     });
   } catch (error) {
     return sendServerError(res, "Failed to fetch tournaments", error);
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   }
+};
 
-<<<<<<< HEAD
-  const safeMaxTeams = Number.isFinite(maxTeams) ? maxTeams : 8;
-  const safeMinPlayers = Number.isFinite(minPlayers) ? minPlayers : 11;
-  const safeMaxPlayers = Number.isFinite(maxPlayers) ? maxPlayers : 15;
-
-  if (safeMaxTeams < 2) {
-    throw createError(400, "Tournament must allow at least two teams");
-  }
-  if (safeMinPlayers < 2) {
-    throw createError(400, "Each team must have at least two players");
-  }
-  if (safeMaxPlayers < safeMinPlayers) {
-    throw createError(400, "Maximum players must be greater than or equal to minimum players");
-=======
 // Get active/live tournaments
 exports.getActiveTournaments = async (req, res) => {
   try {
@@ -338,7 +276,6 @@ exports.getTournament = async (req, res) => {
 
 // ========== TEAM REGISTRATION ==========
 
-// Register team in tournament
 exports.registerTeam = async (req, res) => {
   try {
     const { 
@@ -376,7 +313,6 @@ exports.registerTeam = async (req, res) => {
       });
     }
 
-    // Check registration status
     if (tournament.status === 'registration_closed' || tournament.status === 'ongoing' || tournament.status === 'completed') {
       return res.status(400).json({ 
         success: false,
@@ -384,7 +320,6 @@ exports.registerTeam = async (req, res) => {
       });
     }
 
-    // Check if tournament is full
     if (tournament.registeredTeams.length >= tournament.maxTeams) {
       return res.status(400).json({ 
         success: false,
@@ -469,7 +404,6 @@ exports.registerTeam = async (req, res) => {
       }
     }
 
-    // Validation
     if (!resolvedTeamName || !resolvedCaptain || resolvedPlayers.length === 0) {
       return res.status(400).json({ 
         success: false,
@@ -477,7 +411,6 @@ exports.registerTeam = async (req, res) => {
       });
     }
 
-    // Check if team name already exists
     const teamExists = tournament.registeredTeams.some(
       (t) => String(t.teamName || "").toLowerCase() === resolvedTeamName.toLowerCase()
     );
@@ -500,7 +433,6 @@ exports.registerTeam = async (req, res) => {
       }
     }
 
-    // Validate player count
     if (resolvedPlayers.length < tournament.minPlayers || resolvedPlayers.length > tournament.maxPlayers) {
       return res.status(400).json({ 
         success: false,
@@ -549,7 +481,6 @@ exports.registerTeam = async (req, res) => {
       ...(Number.isFinite(player.jerseyNumber) ? { jerseyNumber: player.jerseyNumber } : {})
     }));
 
-    // Add team to tournament
     tournament.registeredTeams.push({
       teamId: resolvedTeamId,
       teamName: resolvedTeamName,
@@ -571,7 +502,6 @@ exports.registerTeam = async (req, res) => {
       }
     });
 
-    // Add to standings
     tournament.standings.push({
       teamName: resolvedTeamName,
       teamId: resolvedTeamId,
@@ -603,7 +533,6 @@ exports.registerTeam = async (req, res) => {
   }
 };
 
-// Unregister team from tournament
 exports.unregisterTeam = async (req, res) => {
   try {
     const { teamName, teamId } = req.body;
@@ -617,7 +546,6 @@ exports.unregisterTeam = async (req, res) => {
       });
     }
 
-    // Check if tournament has started
     if (tournament.status === 'ongoing' || tournament.status === 'completed') {
       return res.status(400).json({ 
         success: false,
@@ -664,7 +592,6 @@ exports.unregisterTeam = async (req, res) => {
 
 // ========== FIXTURE GENERATION ==========
 
-// Generate league fixtures (Round-robin algorithm)
 exports.generateFixtures = async (req, res) => {
   try {
     const tournamentId = req.params.id;
@@ -677,7 +604,6 @@ exports.generateFixtures = async (req, res) => {
       });
     }
 
-    // Check authorization
     if (tournament.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ 
         success: false,
@@ -697,24 +623,20 @@ exports.generateFixtures = async (req, res) => {
     let fixtures = [];
 
     if (tournament.tournamentType === 'league' || tournament.tournamentType === 'league_knockout') {
-      // Round-robin algorithm (Circle method)
       fixtures = generateRoundRobinFixtures(teams, tournament.venues || [{ name: tournament.venue }]);
     } else if (tournament.tournamentType === 'knockout') {
-      // Single elimination bracket
       fixtures = generateKnockoutFixtures(teams, tournament.venues || [{ name: tournament.venue }]);
     } else if (tournament.tournamentType === 'group_stage') {
-      // Group-wise round-robin
       fixtures = generateGroupStageFixtures(tournament);
     }
 
-    // Assign dates to fixtures
     const startDate = new Date(tournament.startDate);
     fixtures.forEach((fixture, index) => {
-      const dayOffset = Math.floor(index / 2); // 2 matches per day
+      const dayOffset = Math.floor(index / 2);
       const matchDate = new Date(startDate);
       matchDate.setDate(startDate.getDate() + dayOffset);
       fixture.date = matchDate;
-      fixture.time = index % 2 === 0 ? "14:00" : "19:00"; // Afternoon and evening slots
+      fixture.time = index % 2 === 0 ? "14:00" : "19:00";
     });
 
     tournament.schedule = fixtures;
@@ -731,13 +653,11 @@ exports.generateFixtures = async (req, res) => {
   }
 };
 
-// Helper: Round-robin fixture generation (Circle method)
 function generateRoundRobinFixtures(teams, venues) {
   const fixtures = [];
   const teamsCopy = [...teams];
   let matchNumber = 1;
 
-  // If odd number of teams, add a "BYE"
   if (teamsCopy.length % 2 !== 0) {
     teamsCopy.push("BYE");
   }
@@ -750,7 +670,6 @@ function generateRoundRobinFixtures(teams, venues) {
       const team1 = teamsCopy[i];
       const team2 = teamsCopy[teamsCopy.length - 1 - i];
 
-      // Skip if either team is BYE
       if (team1 !== "BYE" && team2 !== "BYE") {
         fixtures.push({
           round: `Round ${round + 1}`,
@@ -763,20 +682,17 @@ function generateRoundRobinFixtures(teams, venues) {
       }
     }
 
-    // Rotate teams (keep first team fixed, rotate others)
     teamsCopy.splice(1, 0, teamsCopy.pop());
   }
 
   return fixtures;
 }
 
-// Helper: Knockout bracket generation
 function generateKnockoutFixtures(teams, venues) {
   const fixtures = [];
   let matchNumber = 1;
   const numTeams = teams.length;
 
-  // Round 1 (or Quarter-finals, etc.)
   for (let i = 0; i < numTeams; i += 2) {
     if (i + 1 < numTeams) {
       fixtures.push({
@@ -793,7 +709,6 @@ function generateKnockoutFixtures(teams, venues) {
   return fixtures;
 }
 
-// Helper: Group stage fixtures
 function generateGroupStageFixtures(tournament) {
   const fixtures = [];
   let matchNumber = 1;
@@ -812,7 +727,6 @@ function generateGroupStageFixtures(tournament) {
 
 // ========== STANDINGS & POINTS TABLE ==========
 
-// Get tournament standings/points table
 exports.getStandings = async (req, res) => {
   try {
     const tournament = await Tournament.findById(req.params.id);
@@ -824,13 +738,11 @@ exports.getStandings = async (req, res) => {
       });
     }
 
-    // Sort standings by points, then NRR
     const sortedStandings = tournament.standings.sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       return b.netRunRate - a.netRunRate;
     });
 
-    // Update positions
     sortedStandings.forEach((team, index) => {
       team.position = index + 1;
     });
@@ -844,7 +756,6 @@ exports.getStandings = async (req, res) => {
   }
 };
 
-// Update standings after a match (called by matchController)
 exports.updateStandings = async (req, res) => {
   try {
     const { 
@@ -867,7 +778,6 @@ exports.updateStandings = async (req, res) => {
       });
     }
 
-    // Find teams in standings
     let teamAStanding = tournament.standings.find(s => s.teamName === teamA);
     let teamBStanding = tournament.standings.find(s => s.teamName === teamB);
 
@@ -878,7 +788,6 @@ exports.updateStandings = async (req, res) => {
       });
     }
 
-    // Update match statistics
     teamAStanding.played++;
     teamBStanding.played++;
 
@@ -893,7 +802,6 @@ exports.updateStandings = async (req, res) => {
       noResult: Number(tournament.pointsSystem?.noResult ?? 1)
     };
 
-    // Update runs and overs for NRR calculation
     teamAStanding.runsScored += normalizedTeamAScore;
     teamAStanding.oversPlayed += normalizedTeamAOvers;
     teamAStanding.runsConceded += normalizedTeamBScore;
@@ -904,7 +812,6 @@ exports.updateStandings = async (req, res) => {
     teamBStanding.runsConceded += normalizedTeamAScore;
     teamBStanding.oversBowled += normalizedTeamAOvers;
 
-    // Update wins/losses/ties
     if (resultType === 'tie') {
       teamAStanding.tied++;
       teamBStanding.tied++;
@@ -932,29 +839,24 @@ exports.updateStandings = async (req, res) => {
       teamBStanding.points += pointsSystem.win;
       teamAStanding.points += pointsSystem.loss;
       teamBStanding.form.push('W');
-      teamAStanding.form.push('L');
+      teamBStanding.form.push('L');
     }
 
-    // Keep only last 5 form results
     if (teamAStanding.form.length > 5) teamAStanding.form.shift();
     if (teamBStanding.form.length > 5) teamBStanding.form.shift();
 
-    // Calculate NRR
     tournament.calculateNRR(teamAStanding);
     tournament.calculateNRR(teamBStanding);
 
-    // Sort standings
     tournament.standings.sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       return b.netRunRate - a.netRunRate;
     });
 
-    // Update positions
     tournament.standings.forEach((team, index) => {
       team.position = index + 1;
     });
 
-    // Update tournament statistics
     tournament.statistics.completedMatches++;
 
     await tournament.save();
@@ -971,7 +873,6 @@ exports.updateStandings = async (req, res) => {
 
 // ========== PLAYOFF GENERATION (IPL Style) ==========
 
-// Generate playoff bracket
 exports.generatePlayoffs = async (req, res) => {
   try {
     const tournament = await Tournament.findById(req.params.id);
@@ -983,7 +884,6 @@ exports.generatePlayoffs = async (req, res) => {
       });
     }
 
-    // Check authorization
     if (tournament.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ 
         success: false,
@@ -998,7 +898,6 @@ exports.generatePlayoffs = async (req, res) => {
       });
     }
 
-    // Sort standings to get top 4
     const sortedStandings = tournament.standings.sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
       return b.netRunRate - a.netRunRate;
@@ -1007,12 +906,11 @@ exports.generatePlayoffs = async (req, res) => {
     const top4 = sortedStandings.slice(0, 4);
 
     if (tournament.knockout.playoffFormat === 'ipl_style') {
-      // IPL Format: Qualifier 1, Eliminator, Qualifier 2, Final
       tournament.knockout.qualifier1 = {
         team1: top4[0].teamName,
         team2: top4[1].teamName,
         venue: tournament.venues[0]?.name || tournament.venue,
-        date: new Date(tournament.endDate.getTime() - 7 * 24 * 60 * 60 * 1000) // 7 days before end
+        date: new Date(tournament.endDate.getTime() - 7 * 24 * 60 * 60 * 1000)
       };
 
       tournament.knockout.eliminator = {
@@ -1036,7 +934,6 @@ exports.generatePlayoffs = async (req, res) => {
         date: tournament.endDate
       };
     } else {
-      // Standard: Semi-Final 1, Semi-Final 2, Final
       tournament.knockout.semiFinals = [
         {
           team1: top4[0].teamName,
@@ -1075,7 +972,6 @@ exports.generatePlayoffs = async (req, res) => {
 
 // ========== TOURNAMENT STATUS MANAGEMENT ==========
 
-// Update tournament status
 exports.updateTournamentStatus = async (req, res) => {
   try {
     const { status } = req.body;
@@ -1088,7 +984,6 @@ exports.updateTournamentStatus = async (req, res) => {
       });
     }
 
-    // Check authorization
     if (tournament.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ 
         success: false,
@@ -1123,225 +1018,11 @@ exports.updateTournamentStatus = async (req, res) => {
     });
   } catch (error) {
     return sendServerError(res, "Failed to update tournament", error);
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   }
+};
 
-<<<<<<< HEAD
-  const tournament = await Tournament.create({
-    name,
-    description: String(req.body.description || "").trim(),
-    startDate,
-    endDate,
-    venue,
-    format: String(req.body.format || "T20"),
-    maxTeams: safeMaxTeams,
-    minPlayers: safeMinPlayers,
-    maxPlayers: safeMaxPlayers,
-    prizePool: String(req.body.prizePool || "TBD").trim() || "TBD",
-    createdBy: req.user._id,
-    status: "upcoming"
-  });
-
-  return sendSuccess(res, {
-    message: "Tournament created successfully",
-    tournament: presentTournament(tournament),
-    data: presentTournament(tournament)
-  }, 201);
-});
-
-exports.getAllTournaments = asyncHandler(async (_req, res) => {
-  const tournaments = await Tournament.find()
-    .populate("createdBy", "name email")
-    .sort({ createdAt: -1 });
-
-  return sendSuccess(res, {
-    count: tournaments.length,
-    tournaments: tournaments.map(presentTournament),
-    data: tournaments.map(presentTournament)
-  });
-});
-
-exports.getTournament = asyncHandler(async (req, res) => {
-  const tournament = await Tournament.findById(req.params.id)
-    .populate("createdBy", "name email")
-    .populate("matches");
-
-  if (!tournament) {
-    throw createError(404, "Tournament not found");
-  }
-
-  return sendSuccess(res, {
-    tournament: presentTournament(tournament),
-    data: presentTournament(tournament)
-  });
-});
-
-exports.registerTeam = asyncHandler(async (req, res) => {
-  const tournament = await Tournament.findById(req.params.id);
-  if (!tournament) {
-    throw createError(404, "Tournament not found");
-  }
-
-  if (!REGISTRATION_OPEN_STATES.has(String(tournament.status || "").toLowerCase())) {
-    throw createError(409, "Tournament registration is closed");
-  }
-
-  if (tournament.registeredTeams.length >= tournament.maxTeams) {
-    throw createError(409, "Tournament is full");
-  }
-
-  const teamName = String(req.body.teamName || "").trim();
-  const captain = String(req.body.captain || "").trim();
-  const players = Array.isArray(req.body.players) ? req.body.players : [];
-  const normalizedPlayers = players
-    .map((player) => ({
-      name: String(player?.name || "").trim(),
-      playerId: player?.playerId || null
-    }))
-    .filter((player) => player.name);
-
-  if (!teamName || !captain || normalizedPlayers.length === 0) {
-    throw createError(400, "Team name, captain, and players are required");
-  }
-
-  if (normalizedPlayers.length < tournament.minPlayers || normalizedPlayers.length > tournament.maxPlayers) {
-    throw createError(400, `Select ${tournament.minPlayers}-${tournament.maxPlayers} players`);
-  }
-
-  const playerKeys = new Set();
-  for (const player of normalizedPlayers) {
-    const key = `${String(player.playerId || "").trim()}::${player.name.toLowerCase()}`;
-    if (playerKeys.has(key)) {
-      throw createError(400, "Duplicate players are not allowed in a tournament registration");
-    }
-    playerKeys.add(key);
-  }
-
-  if (!normalizedPlayers.some((player) => player.name === captain)) {
-    throw createError(400, "Captain must be selected from the registered players");
-  }
-
-  const viceCaptain = String(req.body.viceCaptain || "").trim();
-  if (viceCaptain && !normalizedPlayers.some((player) => player.name === viceCaptain)) {
-    throw createError(400, "Vice captain must be selected from the registered players");
-  }
-
-  const wicketkeeper = String(req.body.wicketkeeper || "").trim();
-  if (wicketkeeper && !normalizedPlayers.some((player) => player.name === wicketkeeper)) {
-    throw createError(400, "Wicketkeeper must be selected from the registered players");
-  }
-
-  const alreadyRegistered = tournament.registeredTeams.some(
-    (entry) =>
-      String(entry.registeredBy) === String(req.user._id) ||
-      (req.body.teamId && String(entry.teamId || "") === String(req.body.teamId)) ||
-      String(entry.teamName || "").toLowerCase() === teamName.toLowerCase()
-  );
-
-  if (alreadyRegistered) {
-    throw createError(409, "This team or user is already registered");
-  }
-
-  tournament.registeredTeams.push({
-    teamId: req.body.teamId || null,
-    teamName,
-    captain,
-    viceCaptain,
-    wicketkeeper,
-    coach: String(req.body.coach || "").trim(),
-    players: normalizedPlayers,
-    registeredBy: req.user._id
-  });
-
-  await tournament.save();
-
-  return sendSuccess(res, {
-    message: "Team registered successfully",
-    tournament: presentTournament(tournament),
-    data: presentTournament(tournament)
-  });
-});
-
-exports.unregisterTeam = asyncHandler(async (req, res) => {
-  const tournament = await Tournament.findById(req.params.id);
-  if (!tournament) {
-    throw createError(404, "Tournament not found");
-  }
-
-  if (!REGISTRATION_OPEN_STATES.has(String(tournament.status || "").toLowerCase())) {
-    throw createError(409, "Cannot unregister after tournament has started");
-  }
-
-  const beforeCount = tournament.registeredTeams.length;
-  tournament.registeredTeams = tournament.registeredTeams.filter((entry) => {
-    const matchesUser = String(entry.registeredBy) === String(req.user._id);
-    const matchesTeam = req.body.teamId && String(entry.teamId || "") === String(req.body.teamId);
-    const matchesName = req.body.teamName && String(entry.teamName || "").toLowerCase() === String(req.body.teamName).trim().toLowerCase();
-    return !(matchesUser || matchesTeam || matchesName);
-  });
-
-  if (beforeCount === tournament.registeredTeams.length) {
-    throw createError(404, "Registered team not found for this user");
-  }
-
-  await tournament.save();
-
-  return sendSuccess(res, {
-    message: "Team unregistered successfully",
-    tournament: presentTournament(tournament),
-    data: presentTournament(tournament)
-  });
-});
-
-exports.updateTournamentStatus = asyncHandler(async (req, res) => {
-  const tournament = await Tournament.findById(req.params.id);
-  if (!tournament) {
-    throw createError(404, "Tournament not found");
-  }
-
-  const isOwner = String(tournament.createdBy) === String(req.user._id);
-  const isAdmin = req.user.role === "admin";
-  if (!isOwner && !isAdmin) {
-    throw createError(403, "Not authorized to update this tournament");
-  }
-
-  const nextStatus = String(req.body.status || "").trim();
-  if (!["upcoming", "registration_open", "ongoing", "playoffs", "completed", "cancelled"].includes(nextStatus)) {
-    throw createError(400, "Invalid tournament status");
-  }
-
-  tournament.status = nextStatus;
-  await tournament.save();
-
-  return sendSuccess(res, {
-    message: "Tournament status updated",
-    tournament: presentTournament(tournament),
-    data: presentTournament(tournament)
-  });
-});
-
-exports.deleteTournament = asyncHandler(async (req, res) => {
-  const tournament = await Tournament.findById(req.params.id);
-  if (!tournament) {
-    throw createError(404, "Tournament not found");
-  }
-
-  const isOwner = String(tournament.createdBy) === String(req.user._id);
-  const isAdmin = req.user.role === "admin";
-  if (!isOwner && !isAdmin) {
-    throw createError(403, "Not authorized to delete this tournament");
-  }
-
-  await tournament.deleteOne();
-
-  return sendSuccess(res, {
-    message: "Tournament deleted successfully"
-  });
-});
-=======
 // ========== DELETE TOURNAMENT ==========
 
-// Delete tournament
 exports.deleteTournament = async (req, res) => {
   try {
     const tournament = await Tournament.findById(req.params.id);
@@ -1353,7 +1034,6 @@ exports.deleteTournament = async (req, res) => {
       });
     }
 
-    // Check authorization
     if (tournament.createdBy.toString() !== req.user._id.toString()) {
       return res.status(403).json({ 
         success: false,
@@ -1361,16 +1041,12 @@ exports.deleteTournament = async (req, res) => {
       });
     }
 
-    // Prevent deletion of ongoing/completed tournaments
     if (tournament.status === 'ongoing' || tournament.status === 'playoffs') {
       return res.status(400).json({ 
         success: false,
         message: "Cannot delete an ongoing tournament" 
       });
     }
-
-    // Delete associated matches (optional - you may want to keep them)
-    // await Match.deleteMany({ tournament: tournament._id });
 
     await tournament.deleteOne();
 
@@ -1385,7 +1061,6 @@ exports.deleteTournament = async (req, res) => {
 
 // ========== TOURNAMENT STATISTICS ==========
 
-// Get tournament statistics
 exports.getTournamentStats = async (req, res) => {
   try {
     const tournament = await Tournament.findById(req.params.id)
@@ -1408,5 +1083,4 @@ exports.getTournamentStats = async (req, res) => {
   }
 };
 
-
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
+module.exports = exports;

@@ -1,113 +1,29 @@
 // backend/models/User.js
 const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
-<<<<<<< HEAD
-const battingStatsSchema = new mongoose.Schema(
-  {
-    innings: { type: Number, default: 0 },
-    runs: { type: Number, default: 0 },
-    ballsFaced: { type: Number, default: 0 },
-    fours: { type: Number, default: 0 },
-    sixes: { type: Number, default: 0 },
-    highestScore: { type: Number, default: 0 },
-    strikeRate: { type: Number, default: 0 }
-  },
-  { _id: false }
-);
-
-const bowlingStatsSchema = new mongoose.Schema(
-  {
-    balls: { type: Number, default: 0 },
-    runs: { type: Number, default: 0 },
-    wickets: { type: Number, default: 0 },
-    wides: { type: Number, default: 0 },
-    noBalls: { type: Number, default: 0 },
-    economy: { type: Number, default: 0 }
-  },
-  { _id: false }
-);
-
-const userSchema = new mongoose.Schema(
-  {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-      minlength: 2,
-      maxlength: 80
-    },
-    email: {
-      type: String,
-      required: true,
-      unique: true,
-      lowercase: true,
-      trim: true,
-      index: true
-    },
-    password: {
-      type: String,
-      required: true,
-      minlength: 8,
-      select: false
-    },
-    phone: {
-      type: String,
-      trim: true,
-      maxlength: 20,
-      default: ""
-    },
-    role: {
-      type: String,
-      enum: ["player", "admin", "turf_owner"],
-      default: "player"
-    },
-    profile: {
-      displayName: { type: String, default: "" },
-      playerType: { type: String, default: "Player" },
-      availabilityStatus: { type: String, default: "Available" }
-    },
-    media: {
-      profilePicture: { type: String, default: "" }
-    },
-    stats: {
-      matchesPlayed: { type: Number, default: 0 },
-      wins: { type: Number, default: 0 },
-      losses: { type: Number, default: 0 },
-      followers: { type: Number, default: 0 },
-      batting: {
-        type: battingStatsSchema,
-        default: () => ({})
-      },
-      bowling: {
-        type: bowlingStatsSchema,
-        default: () => ({})
-      }
-    }
-  },
-  {
-    timestamps: true
-  }
-);
-=======
 const userSchema = new mongoose.Schema({
   // ========== BASIC USER INFO ==========
   name: {
     type: String,
     required: [true, "Please provide your name"],
-    trim: true
+    trim: true,
+    minlength: 2,
+    maxlength: 80
   },
   email: {
     type: String,
     required: [true, "Please provide an email"],
     unique: true,
     lowercase: true,
+    trim: true,
     match: [/^\S+@\S+\.\S+$/, "Please enter a valid email"]
   },
   phone: {
     type: String,
-    required: [true, "Please provide a phone number"],
-    match: [/^[0-9]{10,15}$/, "Please enter a valid phone number"],
-    unique: true
+    trim: true,
+    maxlength: 20,
+    default: ""
   },
   password: {
     type: String,
@@ -115,18 +31,17 @@ const userSchema = new mongoose.Schema({
     minlength: 6,
     select: false
   },
-  
+
   // ========== USER ROLE & PERMISSIONS ==========
   role: {
     type: String,
-    enum: ["admin", "user", "scorer", "organizer", "turf_owner"],
+    enum: ["admin", "user", "player", "scorer", "organizer", "turf_owner"],
     default: "user"
   },
-  
+
   // ========== PLAYER PROFILE (Feature #9: Looking/Player Discovery) ==========
   profile: {
-    // Basic Info
-    displayName: String,
+    displayName: { type: String, default: "" },
     bio: {
       type: String,
       maxlength: 500
@@ -134,56 +49,60 @@ const userSchema = new mongoose.Schema({
     dateOfBirth: Date,
     gender: {
       type: String,
-      enum: ['Male', 'Female', 'Other']
+      enum: ["Male", "Female", "Other"]
     },
-    
+
     // Location (for nearby player discovery)
     location: {
       city: String,
       state: String,
       country: {
         type: String,
-        default: 'India'
+        default: "India"
       },
       coordinates: {
         latitude: Number,
         longitude: Number
       }
     },
-    
+
     // Cricket Profile
     playerType: {
       type: String,
-      enum: ['Batsman', 'Bowler', 'All-rounder', 'Wicket-keeper', 'Not specified'],
-      default: 'Not specified'
+      enum: ["Batsman", "Bowler", "All-rounder", "Wicket-keeper", "Player", "Not specified"],
+      default: "Not specified"
     },
     battingStyle: {
       type: String,
-      enum: ['Right-hand', 'Left-hand', 'N/A'],
-      default: 'N/A'
+      enum: ["Right-hand", "Left-hand", "N/A"],
+      default: "N/A"
     },
     bowlingStyle: {
       type: String,
-      enum: ['Fast', 'Fast-Medium', 'Medium', 'Medium-Slow', 'Spin', 'Off-Spin', 'Leg-Spin', 'N/A'],
-      default: 'N/A'
+      enum: ["Fast", "Fast-Medium", "Medium", "Medium-Slow", "Spin", "Off-Spin", "Leg-Spin", "N/A"],
+      default: "N/A"
     },
-    
+
     // Availability & Preferences
     availability: {
       type: String,
-      enum: ['Available', 'Unavailable', 'Looking for team', 'Looking for players'],
-      default: 'Available'
+      enum: ["Available", "Unavailable", "Looking for team", "Looking for players"],
+      default: "Available"
+    },
+    availabilityStatus: {
+      type: String,
+      default: "Available"
     },
     preferredFormats: [{
       type: String,
-      enum: ['T20', 'ODI', 'Test', 'Custom']
+      enum: ["T20", "ODI", "Test", "Custom"]
     }],
     experienceLevel: {
       type: String,
-      enum: ['Beginner', 'Intermediate', 'Advanced', 'Professional'],
-      default: 'Beginner'
+      enum: ["Beginner", "Intermediate", "Advanced", "Professional"],
+      default: "Beginner"
     },
-    
+
     // Jersey & Preferences
     jerseyNumber: {
       type: Number,
@@ -191,7 +110,7 @@ const userSchema = new mongoose.Schema({
       max: 99
     },
     preferredPosition: String,
-    
+
     // Social Media
     social: {
       instagram: String,
@@ -199,27 +118,15 @@ const userSchema = new mongoose.Schema({
       youtube: String
     }
   },
-  
+
   // ========== PLAYER STATISTICS (Feature #6: Leaderboards) ==========
   stats: {
-    // Overall Career Stats
-    matchesPlayed: {
-      type: Number,
-      default: 0
-    },
-    wins: {
-      type: Number,
-      default: 0
-    },
-    losses: {
-      type: Number,
-      default: 0
-    },
-    ties: {
-      type: Number,
-      default: 0
-    },
-    
+    matchesPlayed: { type: Number, default: 0 },
+    wins: { type: Number, default: 0 },
+    losses: { type: Number, default: 0 },
+    ties: { type: Number, default: 0 },
+    followers: { type: Number, default: 0 },
+
     // Batting Statistics
     batting: {
       innings: { type: Number, default: 0 },
@@ -235,7 +142,7 @@ const userSchema = new mongoose.Schema({
       sixes: { type: Number, default: 0 },
       ducks: { type: Number, default: 0 }
     },
-    
+
     // Bowling Statistics
     bowling: {
       innings: { type: Number, default: 0 },
@@ -244,6 +151,8 @@ const userSchema = new mongoose.Schema({
       maidens: { type: Number, default: 0 },
       runs: { type: Number, default: 0 },
       wickets: { type: Number, default: 0 },
+      wides: { type: Number, default: 0 },
+      noBalls: { type: Number, default: 0 },
       bestFigures: {
         wickets: { type: Number, default: 0 },
         runs: { type: Number, default: 0 }
@@ -254,14 +163,14 @@ const userSchema = new mongoose.Schema({
       fiveWickets: { type: Number, default: 0 },
       tenWickets: { type: Number, default: 0 }
     },
-    
+
     // Fielding Statistics
     fielding: {
       catches: { type: Number, default: 0 },
       runOuts: { type: Number, default: 0 },
       stumpings: { type: Number, default: 0 }
     },
-    
+
     // Awards & Achievements
     awards: {
       manOfTheMatch: { type: Number, default: 0 },
@@ -269,7 +178,7 @@ const userSchema = new mongoose.Schema({
       purpleCaps: { type: Number, default: 0 }
     }
   },
-  
+
   // ========== FORMAT-WISE STATISTICS ==========
   formatStats: {
     T20: {
@@ -294,12 +203,12 @@ const userSchema = new mongoose.Schema({
       strikeRate: { type: Number, default: 0 }
     }
   },
-  
+
   // ========== TEAMS & TOURNAMENTS ==========
   teams: [{
     teamId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Team'
+      ref: "Team"
     },
     teamName: String,
     joinedAt: {
@@ -311,21 +220,21 @@ const userSchema = new mongoose.Schema({
       default: true
     }
   }],
-  
+
   tournaments: [{
     tournamentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Tournament'
+      ref: "Tournament"
     },
     tournamentName: String,
     participatedAt: Date
   }],
-  
+
   // ========== MATCH HISTORY ==========
   matchHistory: [{
     matchId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Match'
+      ref: "Match"
     },
     date: Date,
     performance: {
@@ -334,48 +243,42 @@ const userSchema = new mongoose.Schema({
       catches: Number
     }
   }],
-  
+
   // ========== SOCIAL FEATURES (Feature #10: Community) ==========
   social: {
     followers: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: "User"
     }],
     following: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: "User"
     }],
-    
-    // Posts & Activity
     posts: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Post'
+      ref: "Post"
     }],
-    
-    // Likes & Comments
     likedMatches: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Match'
+      ref: "Match"
     }],
-    
-    // Friends/Connections
     friends: [{
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'User'
+      ref: "User"
     }]
   },
-  
+
   // ========== MEDIA & ASSETS ==========
   media: {
     profilePicture: {
       type: String,
-      default: 'https://via.placeholder.com/150'
+      default: ""
     },
     coverPhoto: String,
     actionPhotos: [String],
     videos: [String]
   },
-  
+
   // ========== ACHIEVEMENTS & BADGES ==========
   achievements: [{
     title: String,
@@ -387,30 +290,18 @@ const userSchema = new mongoose.Schema({
     },
     type: {
       type: String,
-      enum: ['milestone', 'tournament', 'performance', 'special']
+      enum: ["milestone", "tournament", "performance", "special"]
     }
   }],
-  
+
   // ========== RANKINGS & RATINGS ==========
   rankings: {
-    overall: {
-      type: Number,
-      default: 0
-    },
-    batting: {
-      type: Number,
-      default: 0
-    },
-    bowling: {
-      type: Number,
-      default: 0
-    },
-    allRounder: {
-      type: Number,
-      default: 0
-    }
+    overall: { type: Number, default: 0 },
+    batting: { type: Number, default: 0 },
+    bowling: { type: Number, default: 0 },
+    allRounder: { type: Number, default: 0 }
   },
-  
+
   rating: {
     overall: {
       type: Number,
@@ -421,7 +312,7 @@ const userSchema = new mongoose.Schema({
     reviews: [{
       userId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref: 'User'
+        ref: "User"
       },
       rating: Number,
       comment: String,
@@ -431,67 +322,37 @@ const userSchema = new mongoose.Schema({
       }
     }]
   },
-  
+
   // ========== NOTIFICATIONS & PREFERENCES ==========
   notifications: {
-    matchInvites: {
-      type: Boolean,
-      default: true
-    },
-    tournamentUpdates: {
-      type: Boolean,
-      default: true
-    },
-    scoreUpdates: {
-      type: Boolean,
-      default: true
-    },
-    socialActivity: {
-      type: Boolean,
-      default: true
-    },
-    email: {
-      type: Boolean,
-      default: true
-    },
-    push: {
-      type: Boolean,
-      default: true
-    }
+    matchInvites: { type: Boolean, default: true },
+    tournamentUpdates: { type: Boolean, default: true },
+    scoreUpdates: { type: Boolean, default: true },
+    socialActivity: { type: Boolean, default: true },
+    email: { type: Boolean, default: true },
+    push: { type: Boolean, default: true }
   },
-  
+
   // ========== ACCOUNT STATUS ==========
-  isVerified: {
-    type: Boolean,
-    default: false
-  },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
-  lastActive: {
-    type: Date,
-    default: Date.now
-  },
-  
+  isVerified: { type: Boolean, default: false },
+  isActive: { type: Boolean, default: true },
+  lastActive: { type: Date, default: Date.now },
+
   // ========== DEVICE & SESSION INFO ==========
   devices: [{
     deviceId: String,
     deviceType: String,
     lastUsed: Date,
-    fcmToken: String // For push notifications
+    fcmToken: String
   }],
-  
+
   // ========== PREMIUM FEATURES ==========
   premium: {
-    isPremium: {
-      type: Boolean,
-      default: false
-    },
+    isPremium: { type: Boolean, default: false },
     expiresAt: Date,
     features: [String]
   }
-  
+
 }, {
   timestamps: true,
   toJSON: { virtuals: true },
@@ -499,48 +360,42 @@ const userSchema = new mongoose.Schema({
 });
 
 // ========== INDEXES FOR PERFORMANCE ==========
-// Note: email and phone already have indexes from unique: true
-userSchema.index({ 'profile.location.city': 1 });
-userSchema.index({ 'profile.availability': 1 });
-userSchema.index({ 'stats.batting.runs': -1 });
-userSchema.index({ 'stats.bowling.wickets': -1 });
+userSchema.index({ "profile.location.city": 1 });
+userSchema.index({ "profile.availability": 1 });
+userSchema.index({ "stats.batting.runs": -1 });
+userSchema.index({ "stats.bowling.wickets": -1 });
 
 // ========== VIRTUAL FIELDS ==========
 
-// Batting Average
-userSchema.virtual('stats.batting.calculatedAverage').get(function() {
+userSchema.virtual("stats.batting.calculatedAverage").get(function () {
   const innings = this.stats?.batting?.innings || 0;
   const notOuts = this.stats?.batting?.notOuts || 0;
   const runs = this.stats?.batting?.runs || 0;
-  
+
   if (innings - notOuts === 0) return 0;
   return (runs / (innings - notOuts)).toFixed(2);
 });
 
-// Bowling Average
-userSchema.virtual('stats.bowling.calculatedAverage').get(function() {
+userSchema.virtual("stats.bowling.calculatedAverage").get(function () {
   const wickets = this.stats?.bowling?.wickets || 0;
   const runs = this.stats?.bowling?.runs || 0;
-  
+
   if (wickets === 0) return 0;
   return (runs / wickets).toFixed(2);
 });
 
-// Total Followers - FIXED
-userSchema.virtual('followerCount').get(function() {
+userSchema.virtual("followerCount").get(function () {
   return this.social?.followers?.length || 0;
 });
 
-// Total Following - FIXED
-userSchema.virtual('followingCount').get(function() {
+userSchema.virtual("followingCount").get(function () {
   return this.social?.following?.length || 0;
 });
 
-// Win Percentage
-userSchema.virtual('winPercentage').get(function() {
+userSchema.virtual("winPercentage").get(function () {
   const matchesPlayed = this.stats?.matchesPlayed || 0;
   const wins = this.stats?.wins || 0;
-  
+
   if (matchesPlayed === 0) return 0;
   return ((wins / matchesPlayed) * 100).toFixed(2);
 });
@@ -550,14 +405,14 @@ userSchema.virtual('winPercentage').get(function() {
 // Hash password before saving
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
-  
+
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
 
-// Update lastActive on login
-userSchema.pre("save", function(next) {
+// Update lastActive on save
+userSchema.pre("save", function (next) {
   if (this.isModified()) {
     this.lastActive = new Date();
   }
@@ -570,143 +425,138 @@ userSchema.pre("save", function(next) {
 userSchema.methods.matchPassword = async function (enteredPassword) {
   return await bcrypt.compare(enteredPassword, this.password);
 };
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
 
 // Update batting stats
-userSchema.methods.updateBattingStats = function(runs, ballsFaced, isOut, isCentury, isHalfCentury) {
+userSchema.methods.updateBattingStats = function (runs, ballsFaced, isOut, isCentury, isHalfCentury) {
   this.stats.batting.innings++;
   this.stats.batting.runs += runs;
   this.stats.batting.ballsFaced += ballsFaced;
-  
+
   if (runs > this.stats.batting.highestScore) {
     this.stats.batting.highestScore = runs;
   }
-  
+
   if (!isOut) {
     this.stats.batting.notOuts++;
   }
-  
+
   if (runs === 0 && isOut) {
     this.stats.batting.ducks++;
   }
-  
+
   if (isCentury) {
     this.stats.batting.centuries++;
   } else if (isHalfCentury) {
     this.stats.batting.halfCenturies++;
   }
-  
+
   // Recalculate average and strike rate
   const innings = this.stats.batting.innings;
   const notOuts = this.stats.batting.notOuts;
-  this.stats.batting.average = innings - notOuts > 0 
+  this.stats.batting.average = innings - notOuts > 0
     ? (this.stats.batting.runs / (innings - notOuts)).toFixed(2)
     : 0;
-  
+
   this.stats.batting.strikeRate = this.stats.batting.ballsFaced > 0
     ? ((this.stats.batting.runs / this.stats.batting.ballsFaced) * 100).toFixed(2)
     : 0;
 };
 
 // Update bowling stats
-userSchema.methods.updateBowlingStats = function(overs, runs, wickets, maidens) {
+userSchema.methods.updateBowlingStats = function (overs, runs, wickets, maidens) {
   this.stats.bowling.innings++;
   this.stats.bowling.overs += overs;
   this.stats.bowling.runs += runs;
   this.stats.bowling.wickets += wickets;
   this.stats.bowling.maidens += maidens;
-  
+
   // Check for best figures
   if (wickets > this.stats.bowling.bestFigures.wickets) {
     this.stats.bowling.bestFigures.wickets = wickets;
     this.stats.bowling.bestFigures.runs = runs;
   }
-  
+
   if (wickets >= 5) {
     this.stats.bowling.fiveWickets++;
   }
-  
+
   if (wickets >= 10) {
     this.stats.bowling.tenWickets++;
   }
-  
+
   // Recalculate economy and average
   this.stats.bowling.economy = this.stats.bowling.overs > 0
     ? (this.stats.bowling.runs / this.stats.bowling.overs).toFixed(2)
     : 0;
-  
+
   this.stats.bowling.average = this.stats.bowling.wickets > 0
     ? (this.stats.bowling.runs / this.stats.bowling.wickets).toFixed(2)
     : 0;
-  
+
   this.stats.bowling.strikeRate = this.stats.bowling.wickets > 0
-    ? ((this.stats.bowling.balls / this.stats.bowling.wickets)).toFixed(2)
+    ? (this.stats.bowling.balls / this.stats.bowling.wickets).toFixed(2)
     : 0;
 };
 
 // Update fielding stats
-userSchema.methods.updateFieldingStats = function(catches, runOuts, stumpings) {
+userSchema.methods.updateFieldingStats = function (catches, runOuts, stumpings) {
   this.stats.fielding.catches += catches || 0;
   this.stats.fielding.runOuts += runOuts || 0;
   this.stats.fielding.stumpings += stumpings || 0;
 };
 
 // Follow another user
-userSchema.methods.followUser = async function(userId) {
+userSchema.methods.followUser = async function (userId) {
   if (!this.social.following.includes(userId)) {
     this.social.following.push(userId);
   }
 };
 
 // Unfollow a user
-userSchema.methods.unfollowUser = async function(userId) {
+userSchema.methods.unfollowUser = async function (userId) {
   this.social.following = this.social.following.filter(
-    id => id.toString() !== userId.toString()
+    (id) => id.toString() !== userId.toString()
   );
 };
 
 // ========== STATIC METHODS ==========
 
-// Get top batsmen (leaderboard)
-userSchema.statics.getTopBatsmen = function(limit = 10) {
+userSchema.statics.getTopBatsmen = function (limit = 10) {
   return this.find()
-    .sort({ 'stats.batting.runs': -1 })
+    .sort({ "stats.batting.runs": -1 })
     .limit(limit)
-    .select('name profile.displayName stats.batting media.profilePicture');
+    .select("name profile.displayName stats.batting media.profilePicture");
 };
 
-// Get top bowlers (leaderboard)
-userSchema.statics.getTopBowlers = function(limit = 10) {
+userSchema.statics.getTopBowlers = function (limit = 10) {
   return this.find()
-    .sort({ 'stats.bowling.wickets': -1 })
+    .sort({ "stats.bowling.wickets": -1 })
     .limit(limit)
-    .select('name profile.displayName stats.bowling media.profilePicture');
+    .select("name profile.displayName stats.bowling media.profilePicture");
 };
 
-// Find players by location (nearby players)
-userSchema.statics.findPlayersByLocation = function(city, availability) {
+userSchema.statics.findPlayersByLocation = function (city, availability) {
   const query = {};
-  if (city) query['profile.location.city'] = new RegExp(city, 'i');
-  if (availability) query['profile.availability'] = availability;
-  
+  if (city) query["profile.location.city"] = new RegExp(city, "i");
+  if (availability) query["profile.availability"] = availability;
+
   return this.find(query)
-    .select('name profile stats media.profilePicture')
+    .select("name profile stats media.profilePicture")
     .limit(50);
 };
 
-// Search players by criteria
-userSchema.statics.searchPlayers = function(filters) {
+userSchema.statics.searchPlayers = function (filters) {
   const query = {};
-  
-  if (filters.playerType) query['profile.playerType'] = filters.playerType;
-  if (filters.battingStyle) query['profile.battingStyle'] = filters.battingStyle;
-  if (filters.bowlingStyle) query['profile.bowlingStyle'] = filters.bowlingStyle;
-  if (filters.availability) query['profile.availability'] = filters.availability;
-  if (filters.location) query['profile.location.city'] = new RegExp(filters.location, 'i');
-  if (filters.experienceLevel) query['profile.experienceLevel'] = filters.experienceLevel;
-  
+
+  if (filters.playerType) query["profile.playerType"] = filters.playerType;
+  if (filters.battingStyle) query["profile.battingStyle"] = filters.battingStyle;
+  if (filters.bowlingStyle) query["profile.bowlingStyle"] = filters.bowlingStyle;
+  if (filters.availability) query["profile.availability"] = filters.availability;
+  if (filters.location) query["profile.location.city"] = new RegExp(filters.location, "i");
+  if (filters.experienceLevel) query["profile.experienceLevel"] = filters.experienceLevel;
+
   return this.find(query)
-    .select('name profile stats media.profilePicture')
+    .select("name profile stats media.profilePicture")
     .limit(20);
 };
 

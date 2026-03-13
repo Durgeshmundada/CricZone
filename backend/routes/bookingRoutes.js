@@ -3,26 +3,7 @@ const {
   createBooking,
   getAllBookings,
   getUserBookings,
-  downloadUserBookingsReport,
   cancelBooking,
-<<<<<<< HEAD
-  updatePaymentStatus,
-  getBillingSummary,
-  downloadBillingReport
-} = require("../controllers/bookingController");
-const { protect, admin, adminOrTurfOwner } = require("../middleware/authMiddleware");
-
-const router = express.Router();
-
-router.post("/", protect, createBooking);
-router.get("/mybookings", protect, getUserBookings);
-router.get("/mybookings/report.csv", protect, downloadUserBookingsReport);
-router.get("/billing/summary", protect, adminOrTurfOwner, getBillingSummary);
-router.get("/billing/report.csv", protect, adminOrTurfOwner, downloadBillingReport);
-router.put("/:id/payment", protect, adminOrTurfOwner, updatePaymentStatus);
-router.put("/:id/cancel", protect, cancelBooking);
-router.get("/", protect, admin, getAllBookings);
-=======
   updateBookingPayment,
   getBillingSummary,
   downloadBillingSummaryCsv,
@@ -51,6 +32,5 @@ router.get("/billing/report.csv", protect, authorizeRoles("admin", "turf_owner")
 
 // Update payment status for a booking
 router.put("/:id/payment", protect, authorizeRoles("admin", "turf_owner"), updateBookingPayment);
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
 
 module.exports = router;

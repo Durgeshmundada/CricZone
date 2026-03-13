@@ -7,6 +7,7 @@ services:
     buildCommand: npm ci
     startCommand: npm start
     healthCheckPath: /api/health
+    branch: deploynew
     autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV

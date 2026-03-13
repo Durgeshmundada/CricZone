@@ -1,10 +1,8 @@
-<<<<<<< HEAD
+// backend/models/PlayerStats.js
 const mongoose = require("mongoose");
 
-=======
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
 const playerStatsSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   playerName: String,
   batting: {
     matches: { type: Number, default: 0 },
@@ -33,8 +31,5 @@ const playerStatsSchema = new mongoose.Schema({
     losses: { type: Number, default: 0 }
   }
 });
-<<<<<<< HEAD
 
 module.exports = mongoose.model("PlayerStats", playerStatsSchema);
-=======
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878

@@ -49,33 +49,12 @@ exports.getTopBowlers = async (req, res) => {
 exports.getTopAllRounders = async (req, res) => {
   try {
     const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 10, 1), 100);
-<<<<<<< HEAD
-    const allRounders = (await User.find()
-      .select('name profile.displayName profile.playerType stats media.profilePicture')
-      .lean())
-      .filter((user) => {
-        const profileType = String(user?.profile?.playerType || '').toLowerCase();
-        const hasBatting = Number(user?.stats?.batting?.runs || 0) > 0;
-        const hasBowling = Number(user?.stats?.bowling?.wickets || 0) > 0;
-        return profileType === 'all-rounder' || (hasBatting && hasBowling);
-      })
-      .map((user) => ({
-        ...user,
-        allRounderScore:
-          Number(user?.stats?.batting?.runs || 0) +
-          (Number(user?.stats?.bowling?.wickets || 0) * 25) +
-          (Number(user?.stats?.wins || 0) * 10)
-      }))
-      .sort((left, right) => right.allRounderScore - left.allRounderScore)
-      .slice(0, limit);
-=======
     const allRounders = await User.find({
       'profile.playerType': 'All-rounder'
     })
       .sort({ 'rankings.allRounder': -1 })
       .limit(limit)
       .select('name profile.displayName stats media.profilePicture');
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
 
     return res.json({
       success: true,
