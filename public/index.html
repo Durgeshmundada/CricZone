@@ -20,6 +20,8 @@
   <link rel="stylesheet" href="styles.css?v=2" />
 </head>
 <body>
+
+  <div id="errorBanner" class="error-banner" style="display:none"></div>
   <div class="backdrop-grid" aria-hidden="true"></div>
 
   <nav class="navbar">
@@ -479,16 +481,15 @@
       <div class="form-card auth-card reveal">
         <h2 class="form-title">Login to CricZone</h2>
         <form id="loginForm">
-          <div class="form-group">
-            <label>Email</label>
-            <input type="email" id="loginEmail" placeholder="Enter your email" required />
 
+          <div class="form-group">
+            <label for="loginEmail">Email</label>
+            <input type="email" id="loginEmail" placeholder="Enter your email" required aria-required="true" aria-label="Email" pattern="^\S+@\S+\.\S+$" />
           </div>
 
           <div class="form-group">
-            <label>Password</label>
-            <input type="password" id="loginPassword" placeholder="Enter your password" required />
-
+            <label for="loginPassword">Password</label>
+            <input type="password" id="loginPassword" placeholder="Enter your password" required aria-required="true" aria-label="Password" minlength="6" />
           </div>
 
           <button type="submit" class="submit-btn">Login</button>
@@ -505,28 +506,25 @@
       <div class="form-card auth-card reveal">
         <h2 class="form-title">Create CricZone Account</h2>
         <form id="signupForm">
-          <div class="form-group">
-            <label>Name</label>
-            <input type="text" id="signupName" placeholder="Enter your name" required />
 
+          <div class="form-group">
+            <label for="signupName">Name</label>
+            <input type="text" id="signupName" placeholder="Enter your name" required aria-required="true" aria-label="Name" />
           </div>
 
           <div class="form-group">
-            <label>Email</label>
-            <input type="email" id="signupEmail" placeholder="Enter your email" required />
-
+            <label for="signupEmail">Email</label>
+            <input type="email" id="signupEmail" placeholder="Enter your email" required aria-required="true" aria-label="Email" pattern="^\S+@\S+\.\S+$" />
           </div>
 
           <div class="form-group">
-            <label>Phone</label>
-            <input type="tel" id="signupPhone" placeholder="Enter your phone number" required />
-
+            <label for="signupPhone">Phone</label>
+            <input type="tel" id="signupPhone" placeholder="Enter your phone number" required aria-required="true" aria-label="Phone" pattern="^[0-9]{10,15}$" />
           </div>
 
           <div class="form-group">
-            <label>Password</label>
-            <input type="password" id="signupPassword" placeholder="Create a password (min 6 characters)" required />
-
+            <label for="signupPassword">Password</label>
+            <input type="password" id="signupPassword" placeholder="Create a password (min 6 characters)" required aria-required="true" aria-label="Password" minlength="6" />
           </div>
 
           <button type="submit" class="submit-btn">Sign Up</button>
@@ -685,6 +683,14 @@
     <p>Built for local cricket communities. <span id="footerYear"></span></p>
   </footer>
 
+  <!-- Google Analytics 4 (free) integration -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-XXXXXXXXXX'); // TODO: Replace with your GA4 Measurement ID
+  </script>
   <script src="runtime-config.js"></script>
   <script src="script.js"></script>
 </body>

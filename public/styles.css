@@ -1,9 +1,95 @@
+/* Loading spinner */
+.loading-spinner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 2rem 0;
+}
+.loading-spinner .spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid var(--primary);
+  border-radius: 50%;
+  width: 36px;
+  height: 36px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+/* Highlight invalid form fields */
+input:invalid, input.invalid {
+  border-color: #ef4444 !important;
+  background: rgba(239,68,68,0.08);
+}
+input:focus:invalid {
+  outline: 2px solid #ef4444;
+}
+/* Persistent error banner */
+.error-banner {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  z-index: 2000;
+  background: #ef4444;
+  color: #fff;
+  font-weight: 700;
+  text-align: center;
+  padding: 0.7rem 1.5rem;
+  box-shadow: 0 2px 12px rgba(239,68,68,0.15);
+  transition: opacity 0.3s;
+  opacity: 0.98;
+  font-size: 1.05rem;
+}
+.error-banner.hide {
+  display: none;
+}
+/* Mobile menu close button */
+.nav-menu-close {
+  display: none;
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  background: none;
+  border: none;
+  color: var(--ink);
+  font-size: 2rem;
+  z-index: 1100;
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-md);
+  transition: background 0.2s;
+}
+.nav-menu-close:active, .nav-menu-close:focus {
+  background: rgba(255,255,255,0.08);
+  outline: none;
+}
+
+@media (max-width: 700px) {
+  .nav-menu-close {
+    display: block;
+    top: 0.2rem;
+    right: 0.2rem;
+    font-size: 2.2rem;
+    padding: 0.7rem 1.2rem;
+    min-width: 44px;
+    min-height: 44px;
+  }
+  .nav-link, .btn-logout, .nav-api-btn {
+    min-height: 44px;
+    min-width: 44px;
+    font-size: 1.15rem;
+  }
+}
 /* ============================================
    CRICZONE — PREMIUM DARK SPORTS UI
    ============================================ */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800;900&display=swap');
 
 *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
 
 :root {
   --bg-body: #0a0e17;
@@ -36,6 +122,97 @@
   --radius-md: 12px;
   --radius-sm: 8px;
   --transition: 0.3s cubic-bezier(0.4,0,0.2,1);
+  --mobile-padding: 4vw;
+}
+
+@media (max-width: 700px) {
+  html { font-size: 15px; }
+  body { font-size: 1rem; }
+  .container, .nav-container {
+    width: 100vw;
+    max-width: 100vw;
+    padding-left: var(--mobile-padding);
+    padding-right: var(--mobile-padding);
+  }
+  .hero-layout {
+    grid-template-columns: 1fr;
+    gap: 1.2rem;
+  }
+  .hero-copy {
+    padding: 1.2rem;
+    border-radius: var(--radius-lg);
+  }
+  .hero-title {
+    font-size: 2rem;
+  }
+  .hero-metrics {
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
+  }
+  .hero-panels {
+    grid-template-columns: 1fr;
+  }
+  .navbar {
+    height: auto;
+    min-height: 56px;
+  }
+  .nav-container {
+    height: auto;
+    flex-direction: column;
+    gap: 0.5rem;
+    padding-top: 0.5rem;
+    padding-bottom: 0.5rem;
+  }
+  .nav-links {
+    flex-direction: column;
+    gap: 0.2rem;
+    width: 100%;
+  }
+  .nav-menu {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  .menu-toggle {
+    display: flex !important;
+  }
+  .nav-menu {
+    display: none;
+    width: 100%;
+    background: var(--bg-surface);
+    position: absolute;
+    left: 0;
+    top: 56px;
+    z-index: 1000;
+    border-bottom-left-radius: var(--radius-md);
+    border-bottom-right-radius: var(--radius-md);
+    box-shadow: var(--shadow-md);
+  }
+  .nav-menu.active {
+    display: flex;
+  }
+  .nav-link, .btn-logout, .nav-api-btn {
+    width: 100%;
+    text-align: left;
+    padding: 1rem 0.5rem;
+    font-size: 1.1rem;
+  }
+  .form-card, .profile-card, .tournament-card, .match-card, .stat-card, .turf-card {
+    padding: 1rem;
+    border-radius: var(--radius-md);
+  }
+  .form-row {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  .matches-grid, .tournaments-grid, #turfs-container, .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+  }
+  .submit-btn, .start-match-btn, .update-score-btn, .complete-match-btn, .book-btn, .download-report-btn {
+    font-size: 1.1rem;
+    padding: 1rem;
+  }
 }
 
 html { scroll-behavior: smooth; }

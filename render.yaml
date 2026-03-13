@@ -3,11 +3,10 @@ services:
     name: criczone-app
     runtime: node
     plan: free
-    rootDir: backend
-    buildCommand: npm ci
-    startCommand: npm start
+    rootDir: .
+    buildCommand: npm --prefix backend ci
+    startCommand: npm --prefix backend start
     healthCheckPath: /api/health
-    branch: deploynew
     autoDeployTrigger: commit
     envVars:
       - key: NODE_ENV

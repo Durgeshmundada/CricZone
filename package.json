@@ -9,6 +9,8 @@
   "scripts": {
     "start": "npm --prefix backend start",
     "dev": "npm --prefix backend run dev",
-    "test": "npm --prefix backend test"
+    "test": "npm --prefix backend test",
+    "check:public": "node --check public/script.js",
+    "verify": "npm run check:public && npm test"
   }
 }

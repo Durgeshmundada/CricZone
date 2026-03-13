@@ -478,7 +478,6 @@ const matchSchema = new mongoose.Schema({
 
 // ========== INDEXES ==========
 matchSchema.index({ status: 1, matchDate: -1 });
-matchSchema.index({ createdBy: 1 });
 matchSchema.index({ tournament: 1 });
 matchSchema.index({ "teamA.playerLinks.userId": 1 });
 matchSchema.index({ "teamB.playerLinks.userId": 1 });
