@@ -1,21 +1,7 @@
 // backend/routes/userRoutes.js
 const express = require("express");
-<<<<<<< HEAD
-const userController = require("../controllers/userController");
-const { protect, admin } = require("../middleware/authMiddleware");
-
-const router = express.Router();
-
-router.post("/signup", userController.register);
-router.post("/register", userController.register);
-router.post("/login", userController.login);
-router.get("/search-players", userController.searchPlayers);
-router.get("/profile", protect, userController.getProfile);
-router.put("/profile", protect, userController.updateProfile);
-router.get("/", protect, admin, userController.getAllUsers);
-=======
-const { 
-  registerUser, 
+const {
+  registerUser,
   loginUser,
   getUserProfile,
   updateUserProfile,
@@ -66,6 +52,5 @@ router.put("/role", protect, authorizeRoles("admin"), updateUserRole);
 // Follow/Unfollow users (protected)
 router.post("/follow/:userId", protect, followUser);
 router.post("/unfollow/:userId", protect, unfollowUser);
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
 
 module.exports = router;

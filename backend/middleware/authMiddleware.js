@@ -1,30 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
-const { asyncHandler, createError } = require("../utils/http");
 
-<<<<<<< HEAD
-const getBearerToken = (authorizationHeader = "") => {
-  const [scheme, token] = String(authorizationHeader).trim().split(" ");
-  if (scheme !== "Bearer" || !token) return null;
-  return token;
-};
-
-const protect = asyncHandler(async (req, _res, next) => {
-  if (!process.env.JWT_SECRET) {
-    throw createError(500, "JWT_SECRET is not configured");
-  }
-
-  const token = getBearerToken(req.headers.authorization);
-  if (!token) {
-    throw createError(401, "Authentication required");
-  }
-
-  let decoded;
-  try {
-    decoded = jwt.verify(token, process.env.JWT_SECRET);
-  } catch (_error) {
-    throw createError(401, "Invalid or expired token");
-=======
 const isProduction = process.env.NODE_ENV === "production";
 
 const protect = async (req, res, next) => {
@@ -84,40 +60,9 @@ const protect = async (req, res, next) => {
       message: "Not authorized, invalid token",
       ...(isProduction ? {} : { error: error.message })
     });
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
   }
-
-  const user = await User.findById(decoded.id);
-  if (!user) {
-    throw createError(401, "User not found for token");
-  }
-
-  req.user = user;
-  next();
-});
-
-const authorizeRoles = (...roles) => (req, _res, next) => {
-  if (!req.user) {
-    return next(createError(401, "Authentication required"));
-  }
-
-  if (!roles.includes(req.user.role)) {
-    return next(createError(403, "You do not have permission to perform this action"));
-  }
-
-  return next();
 };
 
-<<<<<<< HEAD
-const admin = authorizeRoles("admin");
-const adminOrTurfOwner = authorizeRoles("admin", "turf_owner");
-
-module.exports = protect;
-module.exports.protect = protect;
-module.exports.admin = admin;
-module.exports.adminOrTurfOwner = adminOrTurfOwner;
-module.exports.authorizeRoles = authorizeRoles;
-=======
 const admin = (req, res, next) => {
   if (req.user && req.user.role === "admin") {
     return next();
@@ -147,6 +92,8 @@ const authorizeRoles = (...roles) => (req, res, next) => {
   return next();
 };
 
+const adminOrTurfOwner = authorizeRoles("admin", "turf_owner");
+
 const optionalAuth = async (req, _res, next) => {
   try {
     let token;
@@ -172,5 +119,9 @@ const optionalAuth = async (req, _res, next) => {
   }
 };
 
-module.exports = { protect, admin, authorizeRoles, optionalAuth };
->>>>>>> 9a56d599cc7a5ec62e038b572a2785508031f878
+module.exports = protect;
+module.exports.protect = protect;
+module.exports.admin = admin;
+module.exports.adminOrTurfOwner = adminOrTurfOwner;
+module.exports.authorizeRoles = authorizeRoles;
+module.exports.optionalAuth = optionalAuth;
