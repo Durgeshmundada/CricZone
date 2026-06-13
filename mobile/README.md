@@ -36,6 +36,10 @@ APK output:
 
 `mobile\CricZone-debug.apk`
 
+Generated APK files are intentionally ignored by Git. Build them locally with the
+command above, or attach signed release artifacts to a GitHub Release instead of
+committing binaries to the source repository.
+
 ## Open project in Android Studio
 
 ```powershell

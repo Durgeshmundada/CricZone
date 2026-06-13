@@ -28,6 +28,7 @@ temp/
 dist/
 build/
 coverage/
+*.apk
 .DS_Store
 
 # Legacy frontend folder artifacts
