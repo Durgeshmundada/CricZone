@@ -112,7 +112,7 @@ app.use(helmet({
       "img-src": ["'self'", "data:", "blob:", "https:"],
       "object-src": ["'none'"],
       "script-src": ["'self'", "'unsafe-inline'", "https://www.googletagmanager.com"],
-      "script-src-attr": ["'unsafe-inline'"],
+      "script-src-attr": ["'none'"],
       "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       "upgrade-insecure-requests": isProduction ? [] : null
     }

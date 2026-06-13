@@ -26,3 +26,11 @@
 - Replaced billing-summary document loading with a MongoDB aggregation.
 - Verified model timestamps and added compound indexes for common owner, status, date, invitation, and billing queries.
 - Added focused service and pagination regression tests.
+
+## Phase 4 - Frontend Modularization and Rendering Safety
+
+- Replaced the 4,071-line monolithic browser script with nine responsibility-focused no-build modules.
+- Added quote-safe HTML escaping, CSS token and MongoDB identifier allowlists, and image URL protocol validation.
+- Removed inline event handlers, blocked script attributes through CSP, and registered actions through event listeners.
+- Updated service-worker caching and public contract tests for the modular asset graph.
+- Verified the static shell and navigation in managed Chrome.

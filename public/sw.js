@@ -1,9 +1,17 @@
-const STATIC_CACHE = "criczone-static-v4";
+const STATIC_CACHE = "criczone-static-v5";
 const STATIC_ASSETS = [
   "/",
   "/index.html",
   "/styles.css",
-  "/script.js",
+  "/js/api.js",
+  "/js/ui.js",
+  "/js/teams.js",
+  "/js/matches.js",
+  "/js/bookings.js",
+  "/js/players.js",
+  "/js/turfs.js",
+  "/js/tournaments.js",
+  "/js/app.js",
   "/runtime-config.js",
   "/manifest.webmanifest",
   "/icons/icon-192.png",

@@ -4,8 +4,34 @@ const vm = require("vm");
 
 const projectRoot = path.resolve(__dirname, "..", "..");
 const publicIndexPath = path.join(projectRoot, "public", "index.html");
-const publicScriptPath = path.join(projectRoot, "public", "script.js");
+const publicScriptPaths = [
+  "api.js",
+  "ui.js",
+  "teams.js",
+  "matches.js",
+  "bookings.js",
+  "players.js",
+  "turfs.js",
+  "tournaments.js",
+  "app.js"
+].map((fileName) => path.join(projectRoot, "public", "js", fileName));
 const runtimeConfigPath = path.join(projectRoot, "public", "runtime-config.js");
+const expectedPublicScriptSources = [
+  "runtime-config.js",
+  "js/api.js",
+  "js/ui.js",
+  "js/teams.js",
+  "js/matches.js",
+  "js/bookings.js",
+  "js/players.js",
+  "js/turfs.js",
+  "js/tournaments.js",
+  "js/app.js"
+];
+
+const readPublicScripts = () => publicScriptPaths
+  .map((scriptPath) => fs.readFileSync(scriptPath, "utf8"))
+  .join("\n");
 
 const DYNAMIC_IDS_CREATED_AT_RUNTIME = new Set([
   "cancelTournamentBtn",
@@ -22,7 +48,7 @@ const DYNAMIC_IDS_CREATED_AT_RUNTIME = new Set([
 
 describe("public app shell contracts", () => {
   test("static HTML contains every literal DOM id referenced by the shipped script", () => {
-    const script = fs.readFileSync(publicScriptPath, "utf8");
+    const script = readPublicScripts();
     const html = fs.readFileSync(publicIndexPath, "utf8");
 
     const scriptIds = new Set();
@@ -52,11 +78,38 @@ describe("public app shell contracts", () => {
   });
 
   test("shipped script parses and defaults to same-origin API configuration", () => {
-    const script = fs.readFileSync(publicScriptPath, "utf8");
+    const script = readPublicScripts();
 
-    expect(() => new vm.Script(script, { filename: "public/script.js" })).not.toThrow();
+    publicScriptPaths.forEach((scriptPath) => {
+      expect(() => new vm.Script(fs.readFileSync(scriptPath, "utf8"), { filename: scriptPath })).not.toThrow();
+    });
     expect(script).toContain('const DEFAULT_API_BASE = ""');
     expect(script).toContain("window.location.origin");
     expect(script).not.toContain("https://criczone-app.onrender.com/api");
+  });
+
+  test("loads the modular scripts in their required dependency order", () => {
+    const html = fs.readFileSync(publicIndexPath, "utf8");
+    const localScriptSources = [...html.matchAll(/<script[^>]+src="([^"]+)"/g)]
+      .map((match) => match[1])
+      .filter((source) => !source.startsWith("https://"));
+
+    expect(localScriptSources).toEqual(expectedPublicScriptSources);
+    expect(html).not.toContain('src="script.js"');
+  });
+
+  test("does not ship inline event handlers and keeps rendering guards", () => {
+    const html = fs.readFileSync(publicIndexPath, "utf8");
+    const script = readPublicScripts();
+    const inlineHandlerPattern = /\son(?:click|change|submit|load|error|input)\s*=/i;
+
+    expect(html).not.toMatch(inlineHandlerPattern);
+    expect(script).not.toMatch(inlineHandlerPattern);
+    expect(script).toContain('.replace(/"/g, "&quot;")');
+    expect(script).toContain(".replace(/'/g, \"&#39;\")");
+    expect(script).toContain("function safeCssToken");
+    expect(script).toContain("function safeObjectId");
+    expect(script).toContain("function sanitizeImageUrl");
+    expect(script).not.toMatch(/data:image\\\/svg\+xml.*return raw/);
   });
 });

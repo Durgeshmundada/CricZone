@@ -15,7 +15,7 @@ owner before repository cleanup began.
 | 6 | Major | Mutating endpoints lack centralized schema validation. | `backend/controllers`, `backend/routes` | Fixed - Zod schemas and validation middleware cover all mutating routes in Phase 2. |
 | 7 | Major | Security middleware was incomplete: implicit CSP and no MongoDB operator rejection. | `backend/server.js` | Fixed - explicit Helmet CSP/HSTS, 100/min global limiter, compression, and recursive key rejection in Phase 2. |
 | 8 | Major | Access tokens are long-lived and cannot be rotated or revoked. | `backend/controllers/userController.js` | Fixed - 30-minute access tokens plus hashed rotating refresh sessions, refresh, and logout endpoints in Phase 2. |
-| 9 | Major | User-generated frontend content is frequently rendered with `innerHTML`. | `public/script.js` | Open - Phase 4 |
+| 9 | Major | User-generated frontend content is frequently rendered with `innerHTML`. | Frontend rendering modules | Fixed - Phase 4 added context escaping, identifier/CSS guards, URL allowlisting, and handler regression tests. |
 | 10 | Major | Automated coverage is narrow and currently depends on an external Atlas database. | `backend/tests` | Open - Phase 5 |
 | 11 | Major | CI and container-based local setup are missing. | Repository root | Open - Phase 6 |
 | 12 | Minor | Generated APK binary was committed. | `mobile/CricZone-debug.apk` | Fixed - Phase 1 |
@@ -47,9 +47,18 @@ owner before repository cleanup began.
 - Confirmed timestamps on Booking, Post, Turf, Team, Tournament, and Match and added compound indexes for their active filters and sorts.
 - Focused Phase 2/3 and public contract suites pass (13/13).
 
+## Phase 4 Notes
+
+- Split the 4,071-line browser script into ordered API, UI, team, match, booking, player, turf, tournament, and application modules without introducing a build dependency.
+- Audited all remaining `innerHTML` writes. Dynamic text is HTML/attribute escaped, object identifiers and CSS tokens are allowlisted, and remote image URLs are restricted to HTTP(S) or non-SVG raster data URLs.
+- Removed inline event handlers and enabled CSP `script-src-attr 'none'`; user actions now use delegated or directly registered listeners.
+- Added public contract checks for module order, independent syntax parsing, inline handler absence, and rendering guards.
+- Browser smoke verification passed for shell rendering and navigation. Expected API error states appeared because the verification server intentionally hosted static assets without the backend.
+- The post-change full suite passed 15/16 tests; the remaining match API test is the documented Atlas DNS dependency addressed in Phase 5.
+
 ## Decisions Needed
 
 - Implement email verification for `User.isVerified`, or remove the unused field.
 - Enable Sentry only if a `SENTRY_DSN` is supplied.
-- Revisit a frontend bundler after no-build ES-module modularization.
+- Revisit a frontend bundler and native ES-module migration after the global-function compatibility layer is retired.
 - Decide whether OpenAPI coverage should expand beyond auth and match endpoints.
