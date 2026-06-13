@@ -2,6 +2,7 @@ const Team = require('../models/Team');
 const User = require('../models/User');
 const Match = require('../models/Match');
 const escapeRegex = require('../utils/escapeRegex');
+const { getPagination, getPaginationMeta } = require('../utils/pagination');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -431,15 +432,23 @@ exports.createTeam = async (req, res) => {
 
 exports.getUserTeams = async (req, res) => {
   try {
-    const teams = await Team.find({ owner: req.user._id })
-      .populate('tournament', 'name')
-      .populate('members.player', 'name email')
-      .sort({ createdAt: -1 });
+    const filter = { owner: req.user._id };
+    const { page, limit, skip } = getPagination(req.query);
+    const [teams, total] = await Promise.all([
+      Team.find(filter)
+        .populate('tournament', 'name')
+        .populate('members.player', 'name email')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Team.countDocuments(filter)
+    ]);
 
     return res.json({
       success: true,
       count: teams.length,
-      data: teams
+      data: teams,
+      meta: getPaginationMeta(total, page, limit)
     });
   } catch (error) {
     return sendServerError(res, 'Failed to fetch teams', error);
@@ -634,17 +643,24 @@ exports.getPlayerSuggestions = async (req, res) => {
 
 exports.getMyTeamInvitations = async (req, res) => {
   try {
-    const teams = await Team.find({
+    const filter = {
       members: {
         $elemMatch: {
           player: req.user._id,
           inviteStatus: 'pending'
         }
       }
-    })
-      .populate('owner', 'name email')
-      .populate('members.player', 'name email')
-      .sort({ updatedAt: -1 });
+    };
+    const { page, limit, skip } = getPagination(req.query);
+    const [teams, total] = await Promise.all([
+      Team.find(filter)
+        .populate('owner', 'name email')
+        .populate('members.player', 'name email')
+        .sort({ updatedAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Team.countDocuments(filter)
+    ]);
 
     const invitations = teams.map((team) => {
       const member = (team.members || []).find(
@@ -663,7 +679,8 @@ exports.getMyTeamInvitations = async (req, res) => {
     return res.json({
       success: true,
       count: invitations.length,
-      data: invitations
+      data: invitations,
+      meta: getPaginationMeta(total, page, limit)
     });
   } catch (error) {
     return sendServerError(res, 'Failed to fetch team invitations', error);

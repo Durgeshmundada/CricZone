@@ -3,6 +3,7 @@ const router = express.Router();
 const { protect, authorizeRoles } = require("../middleware/authMiddleware");
 const validate = require("../middleware/validate");
 const schemas = require("../validation/schemas");
+const { getPagination, getPaginationMeta } = require("../utils/pagination");
 const Turf = require("../models/Turf");
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -82,6 +83,25 @@ const normalizeLocation = (location) => {
       coordinates: [longitude, latitude]
     }
   };
+};
+
+const sendTurfList = async (req, res, filter) => {
+  const { page, limit, skip } = getPagination(req.query);
+  const [turfs, total] = await Promise.all([
+    Turf.find(filter)
+      .populate("ownerId", "name email phone")
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Turf.countDocuments(filter)
+  ]);
+
+  return res.status(200).json({
+    success: true,
+    count: turfs.length,
+    data: turfs,
+    meta: getPaginationMeta(total, page, limit)
+  });
 };
 
 // Add turf
@@ -186,34 +206,18 @@ router.post("/", protect, authorizeRoles("admin", "turf_owner"), validate(schema
 });
 
 // Get all active turfs
-router.get("/all", async (_req, res) => {
+router.get("/all", async (req, res) => {
   try {
-    const turfs = await Turf.find({ isActive: true })
-      .populate("ownerId", "name email phone")
-      .sort({ createdAt: -1 });
-
-    return res.status(200).json({
-      success: true,
-      count: turfs.length,
-      data: turfs
-    });
+    return await sendTurfList(req, res, { isActive: true });
   } catch (error) {
     return sendServerError(res, "Error fetching turfs", error);
   }
 });
 
 // GET / also returns all turfs
-router.get("/", async (_req, res) => {
+router.get("/", async (req, res) => {
   try {
-    const turfs = await Turf.find({ isActive: true })
-      .populate("ownerId", "name email phone")
-      .sort({ createdAt: -1 });
-
-    return res.status(200).json({
-      success: true,
-      count: turfs.length,
-      data: turfs
-    });
+    return await sendTurfList(req, res, { isActive: true });
   } catch (error) {
     return sendServerError(res, "Error fetching turfs", error);
   }
@@ -223,15 +227,7 @@ router.get("/", async (_req, res) => {
 router.get("/owned", protect, authorizeRoles("admin", "turf_owner"), async (req, res) => {
   try {
     const query = req.user.role === "admin" ? {} : { ownerId: req.user._id };
-    const turfs = await Turf.find(query)
-      .populate("ownerId", "name email phone")
-      .sort({ createdAt: -1 });
-
-    return res.status(200).json({
-      success: true,
-      count: turfs.length,
-      data: turfs
-    });
+    return await sendTurfList(req, res, query);
   } catch (error) {
     return sendServerError(res, "Error fetching owned turfs", error);
   }

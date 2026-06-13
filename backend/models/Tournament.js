@@ -449,6 +449,7 @@ const tournamentSchema = new mongoose.Schema({
 
 // ========== INDEXES ==========
 tournamentSchema.index({ status: 1, startDate: -1 });
+tournamentSchema.index({ tournamentType: 1, startDate: -1 });
 tournamentSchema.index({ createdBy: 1 });
 tournamentSchema.index({ "registeredTeams.teamId": 1 });
 tournamentSchema.index({ matches: 1 });
@@ -583,7 +584,8 @@ tournamentSchema.statics.getActiveTournaments = function () {
     status: { $in: ["registration_open", "ongoing", "playoffs"] }
   })
     .populate("createdBy", "name email")
-    .sort({ startDate: 1 });
+    .sort({ startDate: 1 })
+    .limit(50);
 };
 
 tournamentSchema.statics.getUpcomingTournaments = function () {
@@ -592,7 +594,8 @@ tournamentSchema.statics.getUpcomingTournaments = function () {
     startDate: { $gte: new Date() }
   })
     .populate("createdBy", "name email")
-    .sort({ startDate: 1 });
+    .sort({ startDate: 1 })
+    .limit(50);
 };
 
 module.exports = mongoose.model("Tournament", tournamentSchema);

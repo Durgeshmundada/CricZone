@@ -77,5 +77,7 @@ const teamSchema = new mongoose.Schema({
 });
 
 teamSchema.index({ owner: 1, name: 1 }, { unique: true });
+teamSchema.index({ tournament: 1 });
+teamSchema.index({ "members.player": 1, "members.inviteStatus": 1, updatedAt: -1 });
 
 module.exports = mongoose.model("Team", teamSchema);

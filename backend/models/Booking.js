@@ -87,5 +87,8 @@ const bookingSchema = new mongoose.Schema(
 );
 
 bookingSchema.index({ turf: 1, date: 1, startMinutes: 1, endMinutes: 1, status: 1 });
+bookingSchema.index({ user: 1, date: -1, startMinutes: -1 });
+bookingSchema.index({ turf: 1, date: -1, startMinutes: -1 });
+bookingSchema.index({ status: 1, "billing.paymentStatus": 1 });
 
 module.exports = mongoose.model("Booking", bookingSchema);

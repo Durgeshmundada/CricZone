@@ -111,5 +111,7 @@ const turfSchema = new mongoose.Schema(
 
 // Create geospatial index for location-based search
 turfSchema.index({ "location.coordinates": "2dsphere" });
+turfSchema.index({ isActive: 1, createdAt: -1 });
+turfSchema.index({ ownerId: 1, createdAt: -1 });
 
 module.exports = mongoose.model("Turf", turfSchema);

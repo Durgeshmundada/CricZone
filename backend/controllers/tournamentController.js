@@ -1,6 +1,7 @@
 const mongoose = require("mongoose");
 const Tournament = require("../models/Tournament");
 const Team = require("../models/Team");
+const { getPagination, getPaginationMeta } = require("../utils/pagination");
 const isProduction = process.env.NODE_ENV === "production";
 
 const sendServerError = (res, message, error) => {
@@ -209,19 +210,27 @@ exports.getAllTournaments = async (req, res) => {
       filter.status = { $in: ['upcoming', 'registration_open', 'registration_closed'] };
     }
 
-    const tournaments = await Tournament.find(filter)
-      .populate("createdBy", "name email")
-      .populate({
-        path: "matches",
-        select: "matchName status matchDate teamA.name teamB.name winner",
-        options: { limit: 5, sort: { matchDate: -1 } }
-      })
-      .sort({ startDate: -1 });
+    const { page, limit, skip } = getPagination(req.query);
+    const [tournaments, total] = await Promise.all([
+      Tournament.find(filter)
+        .populate("createdBy", "name email")
+        .populate({
+          path: "matches",
+          select: "matchName status matchDate teamA.name teamB.name winner",
+          options: { limit: 5, sort: { matchDate: -1 } }
+        })
+        .sort({ startDate: -1 })
+        .skip(skip)
+        .limit(limit),
+      Tournament.countDocuments(filter)
+    ]);
 
     res.json({
       success: true,
       count: tournaments.length,
-      tournaments
+      data: tournaments,
+      tournaments,
+      meta: getPaginationMeta(total, page, limit)
     });
   } catch (error) {
     return sendServerError(res, "Failed to fetch tournaments", error);
@@ -231,12 +240,23 @@ exports.getAllTournaments = async (req, res) => {
 // Get active/live tournaments
 exports.getActiveTournaments = async (req, res) => {
   try {
-    const tournaments = await Tournament.getActiveTournaments();
+    const filter = { status: { $in: ["registration_open", "ongoing", "playoffs"] } };
+    const { page, limit, skip } = getPagination(req.query);
+    const [tournaments, total] = await Promise.all([
+      Tournament.find(filter)
+        .populate("createdBy", "name email")
+        .sort({ startDate: 1 })
+        .skip(skip)
+        .limit(limit),
+      Tournament.countDocuments(filter)
+    ]);
     
     res.json({
       success: true,
       count: tournaments.length,
-      tournaments
+      data: tournaments,
+      tournaments,
+      meta: getPaginationMeta(total, page, limit)
     });
   } catch (error) {
     return sendServerError(res, "Failed to fetch active tournaments", error);

@@ -10,8 +10,8 @@ owner before repository cleanup began.
 | 1 | Critical | A live MongoDB URI and JWT secret were committed. | `backend/.env`, original commits `85523c7`, `565b023`, `8ebede8` | Fixed - credentials rotated and reachable local history purged in Phase 1. |
 | 2 | Critical | Authentication endpoints have no rate limiting. | `backend/routes/userRoutes.js` | Fixed - five attempts per 15 minutes in Phase 2. |
 | 3 | Critical | User input is interpolated into regular expressions. | `backend/controllers/userController.js`, `backend/controllers/teamController.js`, `backend/models/User.js` | Fixed - shared metacharacter escaping in Phase 2. |
-| 4 | Major | Match scoring and toss setup are oversized controller functions. | `backend/controllers/matchController.js` | Open - Phase 3 |
-| 5 | Major | Several list endpoints are unbounded. | Match, tournament, team, and booking controllers | Open - Phase 3 |
+| 4 | Major | Match scoring and toss setup are oversized controller functions. | `backend/controllers/matchController.js` | Fixed - scoring/stat propagation and toss initialization moved to focused services in Phase 3. |
+| 5 | Major | Several list endpoints are unbounded. | Match, tournament, team, booking, post, and turf APIs | Fixed - bounded `page`/`limit` queries with pagination metadata in Phase 3. |
 | 6 | Major | Mutating endpoints lack centralized schema validation. | `backend/controllers`, `backend/routes` | Fixed - Zod schemas and validation middleware cover all mutating routes in Phase 2. |
 | 7 | Major | Security middleware was incomplete: implicit CSP and no MongoDB operator rejection. | `backend/server.js` | Fixed - explicit Helmet CSP/HSTS, 100/min global limiter, compression, and recursive key rejection in Phase 2. |
 | 8 | Major | Access tokens are long-lived and cannot be rotated or revoked. | `backend/controllers/userController.js` | Fixed - 30-minute access tokens plus hashed rotating refresh sessions, refresh, and logout endpoints in Phase 2. |
@@ -38,6 +38,14 @@ owner before repository cleanup began.
 - Added Zod validation to every POST, PUT, and DELETE route and rejected MongoDB operator keys before routing.
 - Added hashed opaque refresh tokens, rotation, logout revocation, short-lived access tokens, and login lockout.
 - Focused security tests pass (5/5). The full suite remains blocked by its pre-existing dependency on the unavailable Atlas test connection; Phase 5 replaces it with an in-memory database.
+
+## Phase 3 Notes
+
+- Moved score processing, extras, wickets, innings transitions, match completion, and user/team statistics into `backend/services/scoringService.js`.
+- Moved toss resolution and innings reset into `backend/services/matchSetupService.js`; the match controller now delegates and formats responses.
+- Added bounded pagination with canonical `data` and `meta` fields while preserving legacy collection aliases used by the frontend.
+- Confirmed timestamps on Booking, Post, Turf, Team, Tournament, and Match and added compound indexes for their active filters and sorts.
+- Focused Phase 2/3 and public contract suites pass (13/13).
 
 ## Decisions Needed
 

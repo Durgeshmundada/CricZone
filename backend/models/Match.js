@@ -478,6 +478,7 @@ const matchSchema = new mongoose.Schema({
 
 // ========== INDEXES ==========
 matchSchema.index({ status: 1, matchDate: -1 });
+matchSchema.index({ createdBy: 1, matchDate: -1 });
 matchSchema.index({ tournament: 1 });
 matchSchema.index({ "teamA.playerLinks.userId": 1 });
 matchSchema.index({ "teamB.playerLinks.userId": 1 });
@@ -519,7 +520,8 @@ matchSchema.statics.getLiveMatches = function () {
   return this.find({ status: "live" })
     .populate("createdBy", "name email")
     .populate("tournament", "name")
-    .sort({ matchDate: -1 });
+    .sort({ matchDate: -1 })
+    .limit(50);
 };
 
 matchSchema.statics.getUpcomingMatches = function () {
@@ -529,7 +531,8 @@ matchSchema.statics.getUpcomingMatches = function () {
   })
     .populate("createdBy", "name email")
     .populate("tournament", "name")
-    .sort({ matchDate: 1 });
+    .sort({ matchDate: 1 })
+    .limit(50);
 };
 
 module.exports = mongoose.model("Match", matchSchema);

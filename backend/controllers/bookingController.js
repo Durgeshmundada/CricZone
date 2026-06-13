@@ -1,6 +1,7 @@
 const Booking = require("../models/Booking");
 const Turf = require("../models/Turf");
 const User = require("../models/User");
+const { getPagination, getPaginationMeta } = require("../utils/pagination");
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -72,9 +73,28 @@ exports.createBooking = async (req, res) => {
 
 exports.getAllBookings = async (req, res) => {
   try {
-    const query = req.user.role === "admin" ? {} : req.user.role === "turf_owner" ? { turf: { $in: await Turf.find({ ownerId: req.user._id }).select("_id") } } : {};
-    const bookings = await Booking.find(query).populate("turf", "turfName location").populate("user", "name email phone").sort({ date: -1, startMinutes: -1 });
-    res.json({ success: true, count: bookings.length, bookings });
+    const query = req.user.role === "admin"
+      ? {}
+      : req.user.role === "turf_owner"
+        ? { turf: { $in: await Turf.distinct("_id", { ownerId: req.user._id }) } }
+        : {};
+    const { page, limit, skip } = getPagination(req.query);
+    const [bookings, total] = await Promise.all([
+      Booking.find(query)
+        .populate("turf", "turfName location")
+        .populate("user", "name email phone")
+        .sort({ date: -1, startMinutes: -1 })
+        .skip(skip)
+        .limit(limit),
+      Booking.countDocuments(query)
+    ]);
+    res.json({
+      success: true,
+      count: bookings.length,
+      data: bookings,
+      bookings,
+      meta: getPaginationMeta(total, page, limit)
+    });
   } catch (error) {
     sendServerError(res, "Failed to retrieve bookings", error);
   }
@@ -82,8 +102,23 @@ exports.getAllBookings = async (req, res) => {
 
 exports.getUserBookings = async (req, res) => {
   try {
-    const bookings = await Booking.find({ user: req.user._id }).populate("turf", "turfName location images").sort({ date: -1, startMinutes: -1 });
-    res.json({ success: true, count: bookings.length, bookings });
+    const filter = { user: req.user._id };
+    const { page, limit, skip } = getPagination(req.query);
+    const [bookings, total] = await Promise.all([
+      Booking.find(filter)
+        .populate("turf", "turfName location images")
+        .sort({ date: -1, startMinutes: -1 })
+        .skip(skip)
+        .limit(limit),
+      Booking.countDocuments(filter)
+    ]);
+    res.json({
+      success: true,
+      count: bookings.length,
+      data: bookings,
+      bookings,
+      meta: getPaginationMeta(total, page, limit)
+    });
   } catch (error) {
     sendServerError(res, "Failed to retrieve user bookings", error);
   }
@@ -147,12 +182,18 @@ exports.updateBookingPayment = async (req, res) => {
 
 exports.getBillingSummary = async (req, res) => {
   try {
-    const query = req.user.role === "admin" ? {} : req.user.role === "turf_owner" ? { turf: { $in: await Turf.find({ ownerId: req.user._id }).select("_id") } } : { _id: null };
+    const query = req.user.role === "admin"
+      ? {}
+      : req.user.role === "turf_owner"
+        ? { turf: { $in: await Turf.distinct("_id", { ownerId: req.user._id }) } }
+        : { _id: null };
     
-    const bookings = await Booking.find({ ...query, status: "booked", "billing.paymentStatus": "paid" });
-    
-    const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-    const bookingsCount = bookings.length;
+    const [summary = { totalRevenue: 0, bookingsCount: 0 }] = await Booking.aggregate([
+      { $match: { ...query, status: "booked", "billing.paymentStatus": "paid" } },
+      { $group: { _id: null, totalRevenue: { $sum: "$totalPrice" }, bookingsCount: { $sum: 1 } } }
+    ]);
+    const totalRevenue = summary.totalRevenue || 0;
+    const bookingsCount = summary.bookingsCount || 0;
     
     res.json({ success: true, totalRevenue, bookingsCount });
   } catch (error) {
