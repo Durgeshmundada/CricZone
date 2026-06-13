@@ -1,7 +1,15 @@
 // backend/controllers/userController.js
 const User = require("../models/User");
-const jwt = require("jsonwebtoken");
+const escapeRegex = require("../utils/escapeRegex");
+const {
+  clearRefreshCookie,
+  getRefreshTokenFromRequest,
+  hashRefreshToken,
+  issueSession
+} = require("../services/authTokenService");
 const isProduction = process.env.NODE_ENV === "production";
+const MAX_FAILED_LOGINS = 5;
+const LOCK_DURATION_MS = 15 * 60 * 1000;
 
 const sendServerError = (res, message, error) => {
   console.error(`${message}:`, error);
@@ -12,15 +20,22 @@ const sendServerError = (res, message, error) => {
   });
 };
 
-// Generate JWT Token
-const generateToken = (id) => {
-  const jwtSecret = process.env.JWT_SECRET;
-  if (!jwtSecret) {
-    throw new Error("JWT_SECRET is not configured");
-  }
+const toPublicUser = (user) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  role: user.role
+});
 
-  return jwt.sign({ id }, jwtSecret, {
-    expiresIn: process.env.JWT_EXPIRE || "7d"
+const sendAuthResponse = (res, status, user, session) => {
+  const publicUser = toPublicUser(user);
+  return res.status(status).json({
+    success: true,
+    ...publicUser,
+    token: session.token,
+    expiresIn: session.expiresIn,
+    user: publicUser
   });
 };
 
@@ -61,24 +76,8 @@ const registerUser = async (req, res) => {
       role: "user"
     });
 
-    const token = generateToken(user._id);
-
-    res.status(201).json({
-      success: true,
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      token: token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role
-      }
-    });
+    const session = await issueSession(user, req, res);
+    return sendAuthResponse(res, 201, user, session);
   } catch (error) {
     return sendServerError(res, "Error registering user", error);
   }
@@ -98,7 +97,8 @@ const loginUser = async (req, res) => {
 
     // Normalize email to lowercase to match schema
     const normalizedEmail = email.toLowerCase().trim();
-    const user = await User.findOne({ email: normalizedEmail }).select("+password");
+    const user = await User.findOne({ email: normalizedEmail })
+      .select("+password +failedLoginAttempts +lockUntil +refreshTokens");
 
     if (!user) {
       return res.status(401).json({
@@ -107,35 +107,94 @@ const loginUser = async (req, res) => {
       });
     }
 
-    const isPasswordMatch = await user.matchPassword(password);
-
-    if (!isPasswordMatch) {
-      return res.status(401).json({
+    const now = Date.now();
+    if (user.lockUntil && user.lockUntil.getTime() > now) {
+      return res.status(423).json({
         success: false,
-        message: "Invalid credentials"
+        message: "Account temporarily locked after repeated failed login attempts",
+        retryAfterSeconds: Math.ceil((user.lockUntil.getTime() - now) / 1000)
       });
     }
 
-    const token = generateToken(user._id);
+    if (user.lockUntil) {
+      user.lockUntil = null;
+      user.failedLoginAttempts = 0;
+    }
 
-    res.json({
-      success: true,
-      _id: user._id,
-      name: user.name,
-      email: user.email,
-      phone: user.phone,
-      role: user.role,
-      token: token,
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        role: user.role
+    const isPasswordMatch = await user.matchPassword(password);
+
+    if (!isPasswordMatch) {
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+      const isNowLocked = user.failedLoginAttempts >= MAX_FAILED_LOGINS;
+      if (isNowLocked) {
+        user.lockUntil = new Date(now + LOCK_DURATION_MS);
       }
-    });
+      await user.save({ validateBeforeSave: false });
+
+      return res.status(isNowLocked ? 423 : 401).json({
+        success: false,
+        message: isNowLocked
+          ? "Account temporarily locked after repeated failed login attempts"
+          : "Invalid credentials",
+        ...(isNowLocked ? { retryAfterSeconds: Math.ceil(LOCK_DURATION_MS / 1000) } : {})
+      });
+    }
+
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    const session = await issueSession(user, req, res);
+    return sendAuthResponse(res, 200, user, session);
   } catch (error) {
     return sendServerError(res, "Error logging in", error);
+  }
+};
+
+const refreshSession = async (req, res) => {
+  try {
+    const refreshToken = getRefreshTokenFromRequest(req);
+    if (!refreshToken) {
+      return res.status(401).json({ success: false, message: "Refresh token is required" });
+    }
+
+    const tokenHash = hashRefreshToken(refreshToken);
+    const user = await User.findOne({ "refreshTokens.tokenHash": tokenHash }).select("+refreshTokens");
+    if (!user) {
+      clearRefreshCookie(res);
+      return res.status(401).json({ success: false, message: "Invalid refresh token" });
+    }
+
+    const storedToken = user.refreshTokens.find((entry) => entry.tokenHash === tokenHash);
+    user.refreshTokens = user.refreshTokens.filter((entry) => entry.tokenHash !== tokenHash);
+
+    if (!storedToken || new Date(storedToken.expiresAt).getTime() <= Date.now()) {
+      await user.save({ validateBeforeSave: false });
+      clearRefreshCookie(res);
+      return res.status(401).json({ success: false, message: "Refresh token expired" });
+    }
+
+    const session = await issueSession(user, req, res);
+    return res.json({ success: true, token: session.token, expiresIn: session.expiresIn });
+  } catch (error) {
+    return sendServerError(res, "Error refreshing session", error);
+  }
+};
+
+const logoutUser = async (req, res) => {
+  try {
+    const refreshToken = getRefreshTokenFromRequest(req);
+    if (refreshToken) {
+      const tokenHash = hashRefreshToken(refreshToken);
+      const user = await User.findOne({ "refreshTokens.tokenHash": tokenHash }).select("+refreshTokens");
+      if (user) {
+        user.refreshTokens = user.refreshTokens.filter((entry) => entry.tokenHash !== tokenHash);
+        await user.save({ validateBeforeSave: false });
+      }
+    }
+
+    clearRefreshCookie(res);
+    return res.json({ success: true, message: "Logged out successfully" });
+  } catch (error) {
+    return sendServerError(res, "Error logging out", error);
   }
 };
 
@@ -161,7 +220,7 @@ const searchPlayers = async (req, res) => {
     }
 
     if (location) {
-      filters["profile.location.city"] = new RegExp(location, "i");
+      filters["profile.location.city"] = new RegExp(escapeRegex(location), "i");
     }
 
     if (bowlingStyle) {
@@ -182,8 +241,8 @@ const searchPlayers = async (req, res) => {
 
     if (search) {
       filters.$or = [
-        { name: new RegExp(search, "i") },
-        { "profile.displayName": new RegExp(search, "i") }
+        { name: new RegExp(escapeRegex(search), "i") },
+        { "profile.displayName": new RegExp(escapeRegex(search), "i") }
       ];
     }
 
@@ -215,7 +274,7 @@ const getNearbyPlayers = async (req, res) => {
     }
 
     const players = await User.find({
-      "profile.location.city": new RegExp(city, "i"),
+      "profile.location.city": new RegExp(escapeRegex(city), "i"),
       "profile.availability": { $in: ["Available", "Looking for team"] }
     })
       .select("name profile stats media.profilePicture")
@@ -540,6 +599,8 @@ const unfollowUser = async (req, res) => {
 module.exports = {
   registerUser,
   loginUser,
+  refreshSession,
+  logoutUser,
   getUserProfile,
   updateUserProfile,
   getPlayerById,

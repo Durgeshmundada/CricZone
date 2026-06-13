@@ -6,6 +6,7 @@ const cors = require("cors");
 const compression = require("compression");
 const helmet = require("helmet");
 const rateLimit = require("express-rate-limit");
+const cookieParser = require("cookie-parser");
 const fs = require("fs");
 const path = require("path");
 const http = require("http");
@@ -14,6 +15,7 @@ const socketio = require("socket.io");
 dotenv.config();
 
 const connectDB = require("./config/db");
+const mongoSanitize = require("./middleware/mongoSanitize");
 
 const app = express();
 const server = http.createServer(app);
@@ -53,6 +55,7 @@ const allowedOrigins = parseAllowedOrigins();
 
 const isOriginAllowed = (origin) => {
   if (!origin) return true; // same-origin or server-to-server
+  if (String(process.env.ALLOW_ALL_ORIGINS).toLowerCase() === "true") return true;
   if (allowedOrigins.includes("*")) return true;
   if (allowedOrigins.includes(origin)) return true;
 
@@ -97,25 +100,46 @@ const io = socketio(server, {
 // --------------- MIDDLEWARE ---------------
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
-app.use(helmet({ crossOriginResourcePolicy: false }));
+app.use(helmet({
+  contentSecurityPolicy: {
+    useDefaults: true,
+    directives: {
+      "default-src": ["'self'"],
+      "base-uri": ["'self'"],
+      "connect-src": ["'self'", "https:", "wss:", "ws:"],
+      "font-src": ["'self'", "https://fonts.gstatic.com", "data:"],
+      "frame-ancestors": ["'self'"],
+      "img-src": ["'self'", "data:", "blob:", "https:"],
+      "object-src": ["'none'"],
+      "script-src": ["'self'", "'unsafe-inline'", "https://www.googletagmanager.com"],
+      "script-src-attr": ["'unsafe-inline'"],
+      "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      "upgrade-insecure-requests": isProduction ? [] : null
+    }
+  },
+  crossOriginResourcePolicy: false,
+  hsts: isProduction ? { maxAge: 31536000, includeSubDomains: true, preload: true } : false,
+  referrerPolicy: { policy: "strict-origin-when-cross-origin" },
+  frameguard: { action: "sameorigin" }
+}));
 app.use(compression());
 app.use(cors(corsOptions));
 app.use(
   rateLimit({
-    windowMs: 15 * 60 * 1000,
-    limit: 300,
+    windowMs: 60 * 1000,
+    limit: 100,
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    message: { success: false, message: "Too many requests, please try again shortly" }
   })
 );
 app.use(express.json({ limit: "1mb" }));
 app.use(express.urlencoded({ extended: false, limit: "1mb" }));
+app.use(cookieParser());
+app.use(mongoSanitize);
 
-// Security headers
+// Helmet covers the standard security headers; Permissions-Policy is set explicitly.
 app.use((req, res, next) => {
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  res.setHeader("X-Frame-Options", "SAMEORIGIN");
-  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   next();
 });

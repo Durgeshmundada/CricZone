@@ -1,6 +1,14 @@
 // backend/models/User.js
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
+const escapeRegex = require("../utils/escapeRegex");
+
+const refreshTokenSchema = new mongoose.Schema({
+  tokenHash: { type: String, required: true },
+  expiresAt: { type: Date, required: true },
+  createdAt: { type: Date, default: Date.now },
+  userAgent: { type: String, maxlength: 300, default: "" }
+}, { _id: false });
 
 const userSchema = new mongoose.Schema({
   // ========== BASIC USER INFO ==========
@@ -337,6 +345,9 @@ const userSchema = new mongoose.Schema({
   isVerified: { type: Boolean, default: false },
   isActive: { type: Boolean, default: true },
   lastActive: { type: Date, default: Date.now },
+  failedLoginAttempts: { type: Number, default: 0, min: 0, select: false },
+  lockUntil: { type: Date, default: null, select: false },
+  refreshTokens: { type: [refreshTokenSchema], default: [], select: false },
 
   // ========== DEVICE & SESSION INFO ==========
   devices: [{
@@ -406,7 +417,7 @@ userSchema.virtual("winPercentage").get(function () {
 userSchema.pre("save", async function (next) {
   if (!this.isModified("password")) return next();
 
-  const salt = await bcrypt.genSalt(10);
+  const salt = await bcrypt.genSalt(12);
   this.password = await bcrypt.hash(this.password, salt);
   next();
 });
@@ -537,7 +548,7 @@ userSchema.statics.getTopBowlers = function (limit = 10) {
 
 userSchema.statics.findPlayersByLocation = function (city, availability) {
   const query = {};
-  if (city) query["profile.location.city"] = new RegExp(city, "i");
+  if (city) query["profile.location.city"] = new RegExp(escapeRegex(city), "i");
   if (availability) query["profile.availability"] = availability;
 
   return this.find(query)
@@ -552,7 +563,7 @@ userSchema.statics.searchPlayers = function (filters) {
   if (filters.battingStyle) query["profile.battingStyle"] = filters.battingStyle;
   if (filters.bowlingStyle) query["profile.bowlingStyle"] = filters.bowlingStyle;
   if (filters.availability) query["profile.availability"] = filters.availability;
-  if (filters.location) query["profile.location.city"] = new RegExp(filters.location, "i");
+  if (filters.location) query["profile.location.city"] = new RegExp(escapeRegex(filters.location), "i");
   if (filters.experienceLevel) query["profile.experienceLevel"] = filters.experienceLevel;
 
   return this.find(query)

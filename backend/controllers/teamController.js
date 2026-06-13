@@ -1,6 +1,7 @@
 const Team = require('../models/Team');
 const User = require('../models/User');
 const Match = require('../models/Match');
+const escapeRegex = require('../utils/escapeRegex');
 
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -596,7 +597,7 @@ exports.getPlayerSuggestions = async (req, res) => {
     };
 
     if (queryText) {
-      const regex = new RegExp(queryText, 'i');
+      const regex = new RegExp(escapeRegex(queryText), 'i');
       filters.$or = [
         { name: regex },
         { email: regex },

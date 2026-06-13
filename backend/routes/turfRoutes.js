@@ -1,6 +1,8 @@
 const express = require("express");
 const router = express.Router();
 const { protect, authorizeRoles } = require("../middleware/authMiddleware");
+const validate = require("../middleware/validate");
+const schemas = require("../validation/schemas");
 const Turf = require("../models/Turf");
 
 const isProduction = process.env.NODE_ENV === "production";
@@ -83,7 +85,7 @@ const normalizeLocation = (location) => {
 };
 
 // Add turf
-router.post("/add", protect, authorizeRoles("admin", "turf_owner"), async (req, res) => {
+router.post("/add", protect, authorizeRoles("admin", "turf_owner"), validate(schemas.createTurf), async (req, res) => {
   try {
     const {
       turfName,
@@ -177,7 +179,7 @@ router.post("/add", protect, authorizeRoles("admin", "turf_owner"), async (req, 
 });
 
 // Also support POST / for backward compatibility
-router.post("/", protect, authorizeRoles("admin", "turf_owner"), async (req, res) => {
+router.post("/", protect, authorizeRoles("admin", "turf_owner"), validate(schemas.createTurf), async (req, res) => {
   // Forward to /add handler logic
   req.url = "/add";
   return router.handle(req, res);
@@ -236,7 +238,7 @@ router.get("/owned", protect, authorizeRoles("admin", "turf_owner"), async (req,
 });
 
 // Nearby turfs
-router.post("/nearby", async (req, res) => {
+router.post("/nearby", validate(schemas.nearbyTurfs), async (req, res) => {
   try {
     const { latitude, longitude, maxDistance = 5000 } = req.body;
 
@@ -297,7 +299,7 @@ router.get("/:id", async (req, res) => {
 });
 
 // Update turf
-router.put("/:id", protect, authorizeRoles("admin", "turf_owner"), async (req, res) => {
+router.put("/:id", protect, authorizeRoles("admin", "turf_owner"), validate(schemas.updateTurf), async (req, res) => {
   try {
     const turf = await Turf.findById(req.params.id);
 
@@ -402,7 +404,7 @@ router.put("/:id", protect, authorizeRoles("admin", "turf_owner"), async (req, r
 });
 
 // Delete turf
-router.delete("/:id", protect, authorizeRoles("admin", "turf_owner"), async (req, res) => {
+router.delete("/:id", protect, authorizeRoles("admin", "turf_owner"), validate(schemas.turfIdParam), async (req, res) => {
   try {
     const turf = await Turf.findById(req.params.id);
 

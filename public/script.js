@@ -3555,6 +3555,16 @@ document.addEventListener("DOMContentLoaded", async () => {
   logoutBtn?.addEventListener("click", async () => {
     const confirmed = await modal.confirm("Logout", "Are you sure you want to log out?");
     if (!confirmed) return;
+    try {
+      await fetch(`${API_BASE}/users/logout`, {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: "{}"
+      });
+    } catch (_error) {
+      // Local logout still completes when the API is unavailable.
+    }
     localStorage.removeItem("token");
     localStorage.removeItem("user");
     setUserFromStorage();
@@ -3681,6 +3691,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const response = await fetch(`${API_BASE}/users/login`, {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
@@ -3779,6 +3790,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
         const response = await fetch(`${API_BASE}/users/signup`, {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
             'Accept': 'application/json'
