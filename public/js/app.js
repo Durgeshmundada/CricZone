@@ -105,6 +105,7 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
     localStorage.removeItem("token");
     localStorage.removeItem("user");
+    localStorage.removeItem(REFRESH_SESSION_MARKER);
     setUserFromStorage();
     showToast("Logged out", "info");
     showPage("home");
@@ -423,6 +424,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
       localStorage.removeItem("token");
       localStorage.removeItem("user");
+      localStorage.removeItem(REFRESH_SESSION_MARKER);
       setUserFromStorage();
       resetPasswordForm.reset();
       resetPasswordStatus.classList.add("success");
