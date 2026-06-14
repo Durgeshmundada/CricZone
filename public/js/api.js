@@ -84,11 +84,25 @@ const getCurrentApiBase = () =>
 
 const API_BASE = getCurrentApiBase();
 const nativeFetch = window.fetch.bind(window);
+const REFRESH_SESSION_MARKER = 'criczone_refresh_session';
 let sessionInvalidationHandled = false;
 
 const markStoredSessionActive = () => {
+  try {
+    localStorage.setItem(REFRESH_SESSION_MARKER, '1');
+  } catch (_error) {
+    // Storage can be unavailable in privacy-restricted contexts.
+  }
   sessionInvalidationHandled = false;
   hideErrorBanner();
+};
+
+const hasRefreshSessionMarker = () => {
+  try {
+    return localStorage.getItem(REFRESH_SESSION_MARKER) === '1';
+  } catch (_error) {
+    return false;
+  }
 };
 
 const readJwtExpiry = (token) => {
@@ -108,6 +122,7 @@ const clearStoredSession = (message = "Your session is no longer valid. Please l
   try {
     localStorage.removeItem('token');
     localStorage.removeItem('user');
+    localStorage.removeItem(REFRESH_SESSION_MARKER);
   } catch (_error) {
     // Storage can be unavailable in privacy-restricted contexts.
   }
@@ -145,7 +160,7 @@ const validateStoredSession = async () => {
 
   const expiry = readJwtExpiry(token);
   if (expiry && expiry * 1000 <= Date.now()) {
-    if (await refreshStoredSession()) return true;
+    if (hasRefreshSessionMarker() && await refreshStoredSession()) return true;
     clearStoredSession('Your session expired. Please log in again.');
     return false;
   }
@@ -155,7 +170,13 @@ const validateStoredSession = async () => {
       headers: { Authorization: `Bearer ${token}` }
     });
     if (response.ok) return true;
-    if (response.status === 401 && await refreshStoredSession()) return true;
+    if (
+      response.status === 401 &&
+      hasRefreshSessionMarker() &&
+      await refreshStoredSession()
+    ) {
+      return true;
+    }
     if (response.status === 401) clearStoredSession();
     return false;
   } catch (_error) {

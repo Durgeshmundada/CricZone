@@ -169,6 +169,8 @@ describe("public app shell contracts", () => {
     expect(styles).not.toMatch(/input:invalid/);
     expect(script).toContain('validateStoredSession');
     expect(script).toContain('clearStoredSession');
+    expect(script).toContain("const REFRESH_SESSION_MARKER = 'criczone_refresh_session'");
+    expect(script).toContain('hasRefreshSessionMarker() && await refreshStoredSession()');
     expect(script).toContain('window.addEventListener("hashchange"');
     expect(script).toContain('hadStoredSession && !sessionIsValid ? "login" : "home"');
     expect(script).toContain('register("/sw.js?v=8"');
