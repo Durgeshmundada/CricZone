@@ -1,167 +1,736 @@
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
+// backend/controllers/userController.js
+const crypto = require("crypto");
 const User = require("../models/User");
-const { asyncHandler, createError, sendSuccess } = require("../utils/http");
-const { safeUser } = require("../utils/presenters");
+const escapeRegex = require("../utils/escapeRegex");
+const {
+  clearRefreshCookie,
+  getRefreshTokenFromRequest,
+  hashRefreshToken,
+  issueSession
+} = require("../services/authTokenService");
+const { sendPasswordResetEmail } = require("../services/emailService");
+const { getRequestLogger } = require("../utils/logger");
+const isProduction = process.env.NODE_ENV === "production";
+const MAX_FAILED_LOGINS = 5;
+const LOCK_DURATION_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_LIFETIME_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_RESPONSE = {
+  success: true,
+  message: "If an account exists for that email, a password reset link has been sent."
+};
 
-const validateEmail = (email) => /\S+@\S+\.\S+/.test(String(email || "").trim());
-
-const buildToken = (user) => {
-  if (!process.env.JWT_SECRET) {
-    throw createError(500, "JWT_SECRET is not configured");
-  }
-
-  return jwt.sign({ id: user._id.toString() }, process.env.JWT_SECRET, {
-    expiresIn: process.env.JWT_EXPIRE || "7d"
+const sendServerError = (res, message, error) => {
+  getRequestLogger(res).error({ err: error }, message);
+  return res.status(500).json({
+    success: false,
+    message,
+    ...(isProduction ? {} : { error: error.message })
   });
 };
 
-const sendAuthPayload = (res, user, status, message) => {
-  const safe = safeUser(user);
-  return sendSuccess(
-    res,
-    {
-      message,
-      token: buildToken(user),
-      user: safe,
-      data: safe
-    },
-    status
-  );
+const toPublicUser = (user) => ({
+  _id: user._id,
+  name: user.name,
+  email: user.email,
+  phone: user.phone,
+  role: user.role
+});
+
+const sendAuthResponse = (res, status, user, session) => {
+  const publicUser = toPublicUser(user);
+  return res.status(status).json({
+    success: true,
+    ...publicUser,
+    token: session.token,
+    expiresIn: session.expiresIn,
+    user: publicUser
+  });
 };
 
-exports.register = asyncHandler(async (req, res) => {
-  const name = String(req.body.name || "").trim();
-  const email = String(req.body.email || "").trim().toLowerCase();
-  const password = String(req.body.password || "");
-  const phone = String(req.body.phone || "").trim();
+// Register User
+const registerUser = async (req, res) => {
+  try {
+    const { name, email, phone, password, role } = req.body;
 
-  if (!name || !email || !password) {
-    throw createError(400, "Name, email, and password are required");
-  }
-
-  if (!validateEmail(email)) {
-    throw createError(400, "Please provide a valid email address");
-  }
-
-  if (password.length < 8) {
-    throw createError(400, "Password must be at least 8 characters long");
-  }
-
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    throw createError(409, "Email already registered");
-  }
-
-  const user = await User.create({
-    name,
-    email,
-    phone,
-    password: await bcrypt.hash(password, 12),
-    profile: {
-      displayName: name
+    if (!name || !email || !phone || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required"
+      });
     }
-  });
 
-  return sendAuthPayload(res, user, 201, "User registered successfully");
-});
+    if (role && role !== "user") {
+      return res.status(403).json({
+        success: false,
+        message: "Role assignment is not allowed during self-registration"
+      });
+    }
 
-exports.login = asyncHandler(async (req, res) => {
-  const email = String(req.body.email || "").trim().toLowerCase();
-  const password = String(req.body.password || "");
+    // Normalize email to lowercase to match schema
+    const normalizedEmail = email.toLowerCase().trim();
+    const userExists = await User.findOne({ email: normalizedEmail });
+    if (userExists) {
+      return res.status(400).json({
+        success: false,
+        message: "User already exists"
+      });
+    }
 
-  if (!email || !password) {
-    throw createError(400, "Email and password are required");
+    const user = await User.create({
+      name,
+      email: normalizedEmail,
+      phone,
+      password,
+      role: "user"
+    });
+
+    const session = await issueSession(user, req, res);
+    return sendAuthResponse(res, 201, user, session);
+  } catch (error) {
+    return sendServerError(res, "Error registering user", error);
   }
+};
 
-  const user = await User.findOne({ email }).select("+password");
-  if (!user) {
-    throw createError(401, "Invalid email or password");
-  }
+// Login User
+const loginUser = async (req, res) => {
+  try {
+    const { email, password } = req.body;
 
-  const passwordMatches = await bcrypt.compare(password, user.password);
-  if (!passwordMatches) {
-    throw createError(401, "Invalid email or password");
-  }
+    if (!email || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Please provide email and password"
+      });
+    }
 
-  user.password = undefined;
-  return sendAuthPayload(res, user, 200, "Login successful");
-});
+    // Normalize email to lowercase to match schema
+    const normalizedEmail = email.toLowerCase().trim();
+    const user = await User.findOne({ email: normalizedEmail })
+      .select("+password +failedLoginAttempts +lockUntil +refreshTokens");
 
-exports.getProfile = asyncHandler(async (req, res) => {
-  const safe = safeUser(req.user);
-  return sendSuccess(res, {
-    user: safe,
-    data: safe
-  });
-});
+    if (!user) {
+      return res.status(401).json({
+        success: false,
+        message: "Invalid credentials"
+      });
+    }
 
-exports.updateProfile = asyncHandler(async (req, res) => {
-  const updates = {};
-  const name = String(req.body.name || "").trim();
-  const phone = String(req.body.phone || "").trim();
-  const displayName = String(req.body.displayName || "").trim();
-  const playerType = String(req.body.playerType || "").trim();
-  const availabilityStatus = String(req.body.availabilityStatus || "").trim();
+    const now = Date.now();
+    if (user.lockUntil && user.lockUntil.getTime() > now) {
+      return res.status(423).json({
+        success: false,
+        message: "Account temporarily locked after repeated failed login attempts",
+        retryAfterSeconds: Math.ceil((user.lockUntil.getTime() - now) / 1000)
+      });
+    }
 
-  if (name) updates.name = name;
-  if (phone) updates.phone = phone;
-  if (displayName) updates["profile.displayName"] = displayName;
-  if (playerType) updates["profile.playerType"] = playerType;
-  if (availabilityStatus) updates["profile.availabilityStatus"] = availabilityStatus;
+    if (user.lockUntil) {
+      user.lockUntil = null;
+      user.failedLoginAttempts = 0;
+    }
 
-  if (Object.keys(updates).length === 0) {
-    throw createError(400, "No profile fields provided");
-  }
+    const isPasswordMatch = await user.matchPassword(password);
 
-  const user = await User.findByIdAndUpdate(req.user._id, updates, {
-    new: true,
-    runValidators: true
-  });
-
-  const safe = safeUser(user);
-  return sendSuccess(res, {
-    message: "Profile updated",
-    user: safe,
-    data: safe
-  });
-});
-
-exports.getAllUsers = asyncHandler(async (_req, res) => {
-  const users = await User.find().sort({ createdAt: -1 }).limit(200);
-  return sendSuccess(res, {
-    data: users.map(safeUser)
-  });
-});
-
-exports.searchPlayers = asyncHandler(async (req, res) => {
-  const search = String(req.query.search || "").trim();
-  const query = search
-    ? {
-        $or: [
-          { name: { $regex: search, $options: "i" } },
-          { "profile.displayName": { $regex: search, $options: "i" } },
-          { email: { $regex: search, $options: "i" } }
-        ]
+    if (!isPasswordMatch) {
+      user.failedLoginAttempts = (user.failedLoginAttempts || 0) + 1;
+      const isNowLocked = user.failedLoginAttempts >= MAX_FAILED_LOGINS;
+      if (isNowLocked) {
+        user.lockUntil = new Date(now + LOCK_DURATION_MS);
       }
-    : {};
+      await user.save({ validateBeforeSave: false });
 
-  const users = await User.find(query)
-    .sort({ "stats.matchesPlayed": -1, name: 1 })
-    .limit(100);
+      return res.status(isNowLocked ? 423 : 401).json({
+        success: false,
+        message: isNowLocked
+          ? "Account temporarily locked after repeated failed login attempts"
+          : "Invalid credentials",
+        ...(isNowLocked ? { retryAfterSeconds: Math.ceil(LOCK_DURATION_MS / 1000) } : {})
+      });
+    }
 
-  return sendSuccess(res, {
-    data: users.map((user) => {
-      const safe = safeUser(user);
-      return {
-        _id: safe._id,
-        name: safe.name,
-        email: safe.email,
-        role: safe.role,
-        profile: safe.profile,
-        media: safe.media,
-        stats: safe.stats
-      };
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    const session = await issueSession(user, req, res);
+    return sendAuthResponse(res, 200, user, session);
+  } catch (error) {
+    return sendServerError(res, "Error logging in", error);
+  }
+};
+
+const refreshSession = async (req, res) => {
+  try {
+    const refreshToken = getRefreshTokenFromRequest(req);
+    if (!refreshToken) {
+      return res.status(401).json({ success: false, message: "Refresh token is required" });
+    }
+
+    const tokenHash = hashRefreshToken(refreshToken);
+    const user = await User.findOne({ "refreshTokens.tokenHash": tokenHash }).select("+refreshTokens");
+    if (!user) {
+      clearRefreshCookie(res);
+      return res.status(401).json({ success: false, message: "Invalid refresh token" });
+    }
+
+    const storedToken = user.refreshTokens.find((entry) => entry.tokenHash === tokenHash);
+    user.refreshTokens = user.refreshTokens.filter((entry) => entry.tokenHash !== tokenHash);
+
+    if (!storedToken || new Date(storedToken.expiresAt).getTime() <= Date.now()) {
+      await user.save({ validateBeforeSave: false });
+      clearRefreshCookie(res);
+      return res.status(401).json({ success: false, message: "Refresh token expired" });
+    }
+
+    const session = await issueSession(user, req, res);
+    return res.json({ success: true, token: session.token, expiresIn: session.expiresIn });
+  } catch (error) {
+    return sendServerError(res, "Error refreshing session", error);
+  }
+};
+
+const logoutUser = async (req, res) => {
+  try {
+    const refreshToken = getRefreshTokenFromRequest(req);
+    if (refreshToken) {
+      const tokenHash = hashRefreshToken(refreshToken);
+      const user = await User.findOne({ "refreshTokens.tokenHash": tokenHash }).select("+refreshTokens");
+      if (user) {
+        user.refreshTokens = user.refreshTokens.filter((entry) => entry.tokenHash !== tokenHash);
+        await user.save({ validateBeforeSave: false });
+      }
+    }
+
+    clearRefreshCookie(res);
+    return res.json({ success: true, message: "Logged out successfully" });
+  } catch (error) {
+    return sendServerError(res, "Error logging out", error);
+  }
+};
+
+const getApplicationUrl = (req) => {
+  const configuredUrl = String(process.env.APP_URL || process.env.CLIENT_URL || "")
+    .split(",")
+    .map((value) => value.trim())
+    .find(Boolean);
+
+  return (configuredUrl || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
+};
+
+const forgotPassword = async (req, res) => {
+  const requestLogger = getRequestLogger(req);
+
+  try {
+    const email = req.body.email.toLowerCase().trim();
+    const user = await User.findOne({ email, isActive: true })
+      .select("+passwordResetTokenHash +passwordResetExpiresAt");
+
+    if (!user) {
+      return res.status(200).json(PASSWORD_RESET_RESPONSE);
+    }
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    user.passwordResetTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    user.passwordResetExpiresAt = new Date(Date.now() + PASSWORD_RESET_LIFETIME_MS);
+    await user.save({ validateBeforeSave: false });
+
+    const resetUrl = `${getApplicationUrl(req)}/#reset-password?token=${rawToken}`;
+
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        resetUrl,
+        expiresMinutes: PASSWORD_RESET_LIFETIME_MS / 60000
+      });
+    } catch (error) {
+      user.passwordResetTokenHash = null;
+      user.passwordResetExpiresAt = null;
+      await user.save({ validateBeforeSave: false });
+      requestLogger.error({ err: error, userId: user._id }, "Password reset email delivery failed");
+    }
+
+    return res.status(200).json(PASSWORD_RESET_RESPONSE);
+  } catch (error) {
+    requestLogger.error({ err: error }, "Password reset request failed");
+    return res.status(200).json(PASSWORD_RESET_RESPONSE);
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const tokenHash = crypto.createHash("sha256").update(req.params.token).digest("hex");
+    const user = await User.findOneAndUpdate(
+      {
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpiresAt: { $gt: new Date() },
+        isActive: true
+      },
+      {
+        $unset: {
+          passwordResetTokenHash: 1,
+          passwordResetExpiresAt: 1
+        }
+      },
+      { new: true }
+    ).select("+password +refreshTokens +failedLoginAttempts +lockUntil");
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Password reset link is invalid or has expired"
+      });
+    }
+
+    if (await user.matchPassword(req.body.password)) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be different from your current password"
+      });
+    }
+
+    user.password = req.body.password;
+    user.refreshTokens = [];
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    user.tokenVersion = (Number(user.tokenVersion) || 0) + 1;
+    await user.save({ validateModifiedOnly: true });
+
+    clearRefreshCookie(res);
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully. Please log in with your new password."
+    });
+  } catch (error) {
+    return sendServerError(res, "Error resetting password", error);
+  }
+};
+
+// ========== PLAYER DISCOVERY & SEARCH (Feature #9) ==========
+
+// Search for players with filters
+const searchPlayers = async (req, res) => {
+  try {
+    const {
+      playerType,
+      location,
+      bowlingStyle,
+      battingStyle,
+      availability,
+      experienceLevel,
+      search
+    } = req.query;
+
+    const filters = {};
+
+    if (playerType) {
+      filters["profile.playerType"] = playerType;
+    }
+
+    if (location) {
+      filters["profile.location.city"] = new RegExp(escapeRegex(location), "i");
+    }
+
+    if (bowlingStyle) {
+      filters["profile.bowlingStyle"] = bowlingStyle;
+    }
+
+    if (battingStyle) {
+      filters["profile.battingStyle"] = battingStyle;
+    }
+
+    if (availability) {
+      filters["profile.availability"] = availability;
+    }
+
+    if (experienceLevel) {
+      filters["profile.experienceLevel"] = experienceLevel;
+    }
+
+    if (search) {
+      filters.$or = [
+        { name: new RegExp(escapeRegex(search), "i") },
+        { "profile.displayName": new RegExp(escapeRegex(search), "i") }
+      ];
+    }
+
+    const players = await User.find(filters)
+      .select("name email profile stats media.profilePicture rankings")
+      .limit(50)
+      .sort({ "rankings.overall": -1 });
+
+    res.json({
+      success: true,
+      count: players.length,
+      data: players
+    });
+  } catch (error) {
+    return sendServerError(res, "Error searching players", error);
+  }
+};
+
+// Get nearby players based on location
+const getNearbyPlayers = async (req, res) => {
+  try {
+    const { city } = req.query;
+
+    if (!city) {
+      return res.status(400).json({
+        success: false,
+        message: "City is required"
+      });
+    }
+
+    const players = await User.find({
+      "profile.location.city": new RegExp(escapeRegex(city), "i"),
+      "profile.availability": { $in: ["Available", "Looking for team"] }
     })
-  });
-});
+      .select("name profile stats media.profilePicture")
+      .limit(30);
+
+    res.json({
+      success: true,
+      count: players.length,
+      data: players
+    });
+  } catch (error) {
+    return sendServerError(res, "Error finding nearby players", error);
+  }
+};
+
+// ========== LEADERBOARDS (Feature #6) ==========
+
+// Get top batsmen leaderboard
+const getTopBatsmen = async (req, res) => {
+  try {
+    const { limit = 10, format } = req.query;
+
+    let sortField = "stats.batting.runs";
+
+    if (format === "T20") {
+      sortField = "formatStats.T20.runs";
+    } else if (format === "ODI") {
+      sortField = "formatStats.ODI.runs";
+    }
+
+    const batsmen = await User.find()
+      .sort({ [sortField]: -1 })
+      .limit(parseInt(limit))
+      .select("name profile.displayName stats.batting formatStats media.profilePicture");
+
+    res.json({
+      success: true,
+      count: batsmen.length,
+      leaderboard: batsmen
+    });
+  } catch (error) {
+    return sendServerError(res, "Error fetching top batsmen", error);
+  }
+};
+
+// Get top bowlers leaderboard
+const getTopBowlers = async (req, res) => {
+  try {
+    const { limit = 10, format } = req.query;
+
+    let sortField = "stats.bowling.wickets";
+
+    if (format === "T20") {
+      sortField = "formatStats.T20.wickets";
+    } else if (format === "ODI") {
+      sortField = "formatStats.ODI.wickets";
+    }
+
+    const bowlers = await User.find()
+      .sort({ [sortField]: -1 })
+      .limit(parseInt(limit))
+      .select("name profile.displayName stats.bowling formatStats media.profilePicture");
+
+    res.json({
+      success: true,
+      count: bowlers.length,
+      leaderboard: bowlers
+    });
+  } catch (error) {
+    return sendServerError(res, "Error fetching top bowlers", error);
+  }
+};
+
+// Get all-rounders leaderboard
+const getTopAllRounders = async (req, res) => {
+  try {
+    const { limit = 10 } = req.query;
+
+    const allRounders = await User.find({
+      "profile.playerType": "All-rounder"
+    })
+      .sort({ "rankings.allRounder": -1 })
+      .limit(parseInt(limit))
+      .select("name profile stats media.profilePicture rankings");
+
+    res.json({
+      success: true,
+      count: allRounders.length,
+      leaderboard: allRounders
+    });
+  } catch (error) {
+    return sendServerError(res, "Error fetching all-rounders", error);
+  }
+};
+
+const updateUserRole = async (req, res) => {
+  try {
+    const { userId, role } = req.body;
+    const allowedRoles = ["admin", "user", "scorer", "organizer", "turf_owner"];
+
+    if (!userId || !role) {
+      return res.status(400).json({
+        success: false,
+        message: "userId and role are required"
+      });
+    }
+
+    if (!allowedRoles.includes(String(role))) {
+      return res.status(400).json({
+        success: false,
+        message: `role must be one of: ${allowedRoles.join(", ")}`
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { $set: { role: String(role) } },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "User role updated successfully",
+      user
+    });
+  } catch (error) {
+    return sendServerError(res, "Error updating user role", error);
+  }
+};
+
+// ========== USER PROFILE MANAGEMENT ==========
+
+// Get user profile
+const getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user._id)
+      .select("-password")
+      .populate("teams.teamId", "name")
+      .populate("tournaments.tournamentId", "name");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      user
+    });
+  } catch (error) {
+    return sendServerError(res, "Error fetching profile", error);
+  }
+};
+
+// Update user profile
+const updateUserProfile = async (req, res) => {
+  try {
+    const updates = req.body;
+    const allowedFields = ["name", "phone", "profile", "media", "notifications"];
+    const safeUpdates = {};
+
+    allowedFields.forEach((field) => {
+      if (updates[field] !== undefined) {
+        safeUpdates[field] = updates[field];
+      }
+    });
+
+    if (Object.keys(safeUpdates).length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "No valid profile fields provided for update"
+      });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      req.user._id,
+      { $set: safeUpdates },
+      { new: true, runValidators: true }
+    ).select("-password");
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Profile updated successfully",
+      user
+    });
+  } catch (error) {
+    return sendServerError(res, "Error updating profile", error);
+  }
+};
+
+// Get player by ID (public)
+const getPlayerById = async (req, res) => {
+  try {
+    const player = await User.findById(req.params.id)
+      .select("-password")
+      .populate("teams.teamId", "name")
+      .populate("matchHistory.matchId", "matchName matchDate");
+
+    if (!player) {
+      return res.status(404).json({
+        success: false,
+        message: "Player not found"
+      });
+    }
+
+    res.json({
+      success: true,
+      player
+    });
+  } catch (error) {
+    return sendServerError(res, "Error fetching player", error);
+  }
+};
+
+// ========== SOCIAL FEATURES (Feature #10: Community) ==========
+
+// Follow a user
+const followUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    if (userId === req.user._id.toString()) {
+      return res.status(400).json({
+        success: false,
+        message: "You cannot follow yourself"
+      });
+    }
+
+    const user = await User.findById(req.user._id);
+    const targetUser = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Current user not found"
+      });
+    }
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    if (!user.social.following.includes(userId)) {
+      user.social.following.push(userId);
+      await user.save();
+    }
+
+    if (!targetUser.social.followers.includes(req.user._id)) {
+      targetUser.social.followers.push(req.user._id);
+      await targetUser.save();
+    }
+
+    res.json({
+      success: true,
+      message: "User followed successfully"
+    });
+  } catch (error) {
+    return sendServerError(res, "Error following user", error);
+  }
+};
+
+// Unfollow a user
+const unfollowUser = async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(req.user._id);
+    const targetUser = await User.findById(userId);
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "Current user not found"
+      });
+    }
+
+    if (!targetUser) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+
+    user.social.following = user.social.following.filter(
+      (id) => id.toString() !== userId
+    );
+    await user.save();
+
+    targetUser.social.followers = targetUser.social.followers.filter(
+      (id) => id.toString() !== req.user._id.toString()
+    );
+    await targetUser.save();
+
+    res.json({
+      success: true,
+      message: "User unfollowed successfully"
+    });
+  } catch (error) {
+    return sendServerError(res, "Error unfollowing user", error);
+  }
+};
+
+module.exports = {
+  registerUser,
+  loginUser,
+  refreshSession,
+  logoutUser,
+  forgotPassword,
+  resetPassword,
+  getUserProfile,
+  updateUserProfile,
+  getPlayerById,
+  searchPlayers,
+  getNearbyPlayers,
+  getTopBatsmen,
+  getTopBowlers,
+  getTopAllRounders,
+  updateUserRole,
+  followUser,
+  unfollowUser,
+  // Aliases for backward compatibility with routes that use different names
+  register: registerUser,
+  login: loginUser,
+  getProfile: getUserProfile,
+  updateProfile: updateUserProfile,
+  getAllUsers: async (_req, res) => {
+    try {
+      const users = await User.find().select("-password").sort({ createdAt: -1 }).limit(200);
+      res.json({ success: true, data: users });
+    } catch (error) {
+      return sendServerError(res, "Error fetching users", error);
+    }
+  }
+};

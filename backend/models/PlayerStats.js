@@ -1,7 +1,8 @@
+// backend/models/PlayerStats.js
 const mongoose = require("mongoose");
 
 const playerStatsSchema = new mongoose.Schema({
-  userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+  userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
   playerName: String,
   batting: {
     matches: { type: Number, default: 0 },

@@ -1,8 +1,10 @@
 const Post = require('../models/Post');
+const { getPagination, getPaginationMeta } = require('../utils/pagination');
+const { getRequestLogger } = require('../utils/logger');
 const isProduction = process.env.NODE_ENV === 'production';
 
 const sendServerError = (res, message, error) => {
-  console.error(`${message}:`, error);
+  getRequestLogger(res).error({ err: error }, message);
   return res.status(500).json({
     success: false,
     message,
@@ -12,8 +14,7 @@ const sendServerError = (res, message, error) => {
 
 exports.getAllPosts = async (req, res) => {
   try {
-    const limit = Math.min(Math.max(parseInt(req.query.limit, 10) || 20, 1), 100);
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const { page, limit, skip } = getPagination(req.query);
 
     const posts = await Post.find({ visibility: 'public', isActive: true })
       .populate('userId', 'name profile.displayName media.profilePicture')
@@ -21,16 +22,18 @@ exports.getAllPosts = async (req, res) => {
       .populate('comments.userId', 'name media.profilePicture')
       .sort({ createdAt: -1 })
       .limit(limit)
-      .skip((page - 1) * limit);
+      .skip(skip);
 
     const total = await Post.countDocuments({ visibility: 'public', isActive: true });
 
     return res.json({
       success: true,
       count: posts.length,
+      data: posts,
       total,
       page,
       pages: Math.ceil(total / limit),
+      meta: getPaginationMeta(total, page, limit),
       posts
     });
   } catch (error) {
@@ -41,16 +44,25 @@ exports.getAllPosts = async (req, res) => {
 exports.getUserPosts = async (req, res) => {
   try {
     const { userId } = req.params;
+    const filter = { userId, isActive: true };
+    const { page, limit, skip } = getPagination(req.query);
 
-    const posts = await Post.find({ userId, isActive: true })
-      .populate('userId', 'name profile.displayName media.profilePicture')
-      .populate('matchId', 'matchName matchDate')
-      .sort({ createdAt: -1 });
+    const [posts, total] = await Promise.all([
+      Post.find(filter)
+        .populate('userId', 'name profile.displayName media.profilePicture')
+        .populate('matchId', 'matchName matchDate')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      Post.countDocuments(filter)
+    ]);
 
     return res.json({
       success: true,
       count: posts.length,
-      posts
+      data: posts,
+      posts,
+      meta: getPaginationMeta(total, page, limit)
     });
   } catch (error) {
     return sendServerError(res, 'Failed to fetch user posts', error);

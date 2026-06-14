@@ -1,0 +1,16 @@
+.git
+.github
+.env
+.env.*
+!.env.example
+**/node_modules
+**/coverage
+**/*.log
+**/.cache
+frontend
+mobile
+backend/tests
+*.apk
+*.bak
+*.swp
+Thumbs.db

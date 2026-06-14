@@ -40,14 +40,29 @@ const bookingSchema = new mongoose.Schema(
       required: true,
       min: 0
     },
+    slotHours: {
+      type: Number,
+      default: 1
+    },
     status: {
       type: String,
       enum: ["booked", "cancelled"],
       default: "booked",
       index: true
     },
+    cancelledAt: {
+      type: Date,
+      default: null
+    },
     billing: {
-      invoiceNumber: { type: String, required: true },
+      invoiceNumber: {
+        type: String,
+        required: true
+      },
+      currency: {
+        type: String,
+        default: "INR"
+      },
       paymentStatus: {
         type: String,
         enum: ["pending", "paid", "refunded", "failed"],
@@ -55,21 +70,25 @@ const bookingSchema = new mongoose.Schema(
       },
       paymentMethod: {
         type: String,
+        enum: ["cash", "upi", "card", "netbanking", "wallet", "other", null],
+        default: null
+      },
+      paymentReference: {
+        type: String,
         default: ""
       },
       paidAt: {
         type: Date,
         default: null
       }
-    },
-    cancelledAt: {
-      type: Date,
-      default: null
     }
   },
   { timestamps: true }
 );
 
 bookingSchema.index({ turf: 1, date: 1, startMinutes: 1, endMinutes: 1, status: 1 });
+bookingSchema.index({ user: 1, date: -1, startMinutes: -1 });
+bookingSchema.index({ turf: 1, date: -1, startMinutes: -1 });
+bookingSchema.index({ status: 1, "billing.paymentStatus": 1 });
 
 module.exports = mongoose.model("Booking", bookingSchema);

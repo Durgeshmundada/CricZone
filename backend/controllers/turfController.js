@@ -1,53 +1,99 @@
-const Turf = require("../models/Turf");
-const { asyncHandler, createError, sendSuccess } = require("../utils/http");
-const { presentTurf } = require("../utils/presenters");
+const Turf = require('../models/Turf');
+const { getRequestLogger } = require('../utils/logger');
+const isProduction = process.env.NODE_ENV === 'production';
 
-exports.addTurf = asyncHandler(async (req, res) => {
-  const turfName = String(req.body.turfName || req.body.name || "").trim();
-  const address = typeof req.body.location === "object"
-    ? String(req.body.location.address || req.body.location.city || "").trim()
-    : String(req.body.location || "").trim();
-  const city = typeof req.body.location === "object"
-    ? String(req.body.location.city || "").trim()
-    : address;
-  const state = typeof req.body.location === "object"
-    ? String(req.body.location.state || "").trim()
-    : "";
-  const pricePerHour = Number(req.body.pricePerHour ?? req.body.basePricingPerSlot);
+const sendServerError = (res, message, error) => {
+  getRequestLogger(res).error({ err: error }, message);
+  return res.status(500).json({
+    success: false,
+    message,
+    ...(isProduction ? {} : { error: error.message })
+  });
+};
 
-  if (!turfName || !address || !Number.isFinite(pricePerHour) || pricePerHour < 0) {
-    throw createError(400, "Turf name, location, and price are required");
+exports.addTurf = async (req, res) => {
+  try {
+    const {
+      turfName,
+      location,
+      sportTypes,
+      turfSize,
+      surfaceType,
+      images,
+      amenities,
+      basePricingPerSlot
+    } = req.body;
+
+    // Use backwards compatible mappings if needed
+    const finalTurfName = turfName || req.body.name;
+    const finalPricing = basePricingPerSlot ?? req.body.pricePerHour;
+
+    if (!finalTurfName || !location || !sportTypes || !surfaceType || finalPricing === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required turf fields'
+      });
+    }
+
+    const turf = await Turf.create({
+      turfName: finalTurfName,
+      ownerId: req.user._id,
+      location,
+      sportTypes,
+      turfSize: turfSize || { length: 0, width: 0, unit: 'meters' },
+      surfaceType,
+      images: Array.isArray(images) ? images : [],
+      amenities: amenities || {},
+      basePricingPerSlot: finalPricing
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Turf added successfully',
+      turf,
+      data: turf
+    });
+  } catch (error) {
+    return sendServerError(res, 'Failed to add turf', error);
   }
+};
 
-  const turf = await Turf.create({
-    turfName,
-    name: turfName,
-    location: {
-      address,
-      city,
-      state
-    },
-    pricePerHour,
-    basePricingPerSlot: Number(req.body.basePricingPerSlot ?? pricePerHour),
-    sportTypes: Array.isArray(req.body.sportTypes) && req.body.sportTypes.length > 0
-      ? req.body.sportTypes
-      : [String(req.body.type || "cricket")],
-    surfaceType: String(req.body.surfaceType || "Standard").trim(),
-    type: String(req.body.type || "cricket").trim(),
-    images: Array.isArray(req.body.images) ? req.body.images : [],
-    ownerId: req.user?._id || null
-  });
+exports.getAllTurfs = async (req, res) => {
+  try {
+    const turfs = await Turf.find({ isActive: true })
+      .populate('ownerId', 'name email phone')
+      .sort({ createdAt: -1 });
 
-  return sendSuccess(res, {
-    message: "Turf added successfully",
-    turf: presentTurf(turf),
-    data: presentTurf(turf)
-  }, 201);
-});
+    return res.status(200).json({
+      success: true,
+      count: turfs.length,
+      data: turfs
+    });
+  } catch (error) {
+    return sendServerError(res, 'Failed to fetch turfs', error);
+  }
+};
 
-exports.getAllTurfs = asyncHandler(async (_req, res) => {
-  const turfs = await Turf.find({ isActive: true }).sort({ createdAt: -1 });
-  return sendSuccess(res, {
-    data: turfs.map(presentTurf)
-  });
-});
+exports.getTurfById = async (req, res) => {
+  try {
+    const turf = await Turf.findById(req.params.id)
+      .populate('ownerId', 'name email phone');
+
+    if (!turf) {
+      return res.status(404).json({
+        success: false,
+        message: 'Turf not found'
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      turf,
+      data: turf
+    });
+  } catch (error) {
+    return sendServerError(res, 'Failed to fetch turf', error);
+  }
+};
+
+module.exports = exports;
