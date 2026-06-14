@@ -169,16 +169,6 @@ const resolvePlayerLinks = async (rawPlayers) => {
   return resolvedLinks;
 };
 
-const extractUserIdsFromLinks = (playerLinks = []) => {
-  if (!Array.isArray(playerLinks)) return [];
-  return [...new Set(
-    playerLinks
-      .map((player) => player?.userId)
-      .filter((value) => isValidObjectId(value))
-      .map((value) => String(value))
-  )];
-};
-
 // @desc Create new match
 // @route POST /api/matches
 // @access Protected
@@ -823,7 +813,7 @@ function detectHighlights(match) {
   
   if (ballData.length === 0) return highlights;
   
-  ballData.forEach((ball, index) => {
+  ballData.forEach((ball) => {
     if (ball.runs === 4 || ball.runs === 6) {
       highlights.push({
         type: ball.runs === 6 ? 'six' : 'four',

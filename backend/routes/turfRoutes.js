@@ -306,7 +306,7 @@ router.put("/:id", protect, authorizeRoles("admin", "turf_owner"), validate(sche
       });
     }
 
-    const { ownerId, _id, ...updates } = req.body;
+    const { ownerId: _ownerId, _id: _ignoredId, ...updates } = req.body;
 
     const isAdmin = req.user.role === "admin";
     const isOwner = String(turf.ownerId) === String(req.user._id);

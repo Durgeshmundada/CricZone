@@ -40,6 +40,18 @@ npx http-server public -p 3000
 4. Verify backend health:
 - `http://localhost:5000/api/health`
 
+## Docker development
+
+Docker Compose starts the production-shaped Node service and a local MongoDB instance:
+
+```bash
+docker compose up --build
+```
+
+Open `http://localhost:5000` and verify `http://localhost:5000/api/health` reports MongoDB as connected.
+
+The Compose secret is for local development only. Stop the stack with `docker compose down`; add `-v` only when you intentionally want to delete the local MongoDB volume.
+
 ## Production deployment
 
 Set production env values on your host:

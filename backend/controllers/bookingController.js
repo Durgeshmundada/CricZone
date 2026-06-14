@@ -1,6 +1,5 @@
 const Booking = require("../models/Booking");
 const Turf = require("../models/Turf");
-const User = require("../models/User");
 const { getPagination, getPaginationMeta } = require("../utils/pagination");
 
 const isProduction = process.env.NODE_ENV === "production";

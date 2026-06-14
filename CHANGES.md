@@ -41,3 +41,10 @@
 - Added API suites for users, teams, tournaments, bookings, turfs, posts, and leaderboards and broadened the match lifecycle suite.
 - Added an enforced coverage command and 70% controller/service thresholds; the final run reached 74.59% lines overall.
 - Restricted tournament standings updates to the tournament owner and aligned tournament player-count validation with the database model.
+
+## Phase 6 - Containers and Continuous Integration
+
+- Added a multi-stage Node 18 production Dockerfile, root Docker ignore rules, and an app-plus-MongoDB Compose stack.
+- Added Node-aware ESLint checks and cleaned up unused backend code found by the new gate.
+- Added GitHub Actions jobs for lint, coverage tests, and clean production dependency installation/auditing.
+- Documented the Docker Compose local-development workflow in `SETUP_INSTRUCTIONS.md`.

@@ -17,7 +17,7 @@ owner before repository cleanup began.
 | 8 | Major | Access tokens are long-lived and cannot be rotated or revoked. | `backend/controllers/userController.js` | Fixed - 30-minute access tokens plus hashed rotating refresh sessions, refresh, and logout endpoints in Phase 2. |
 | 9 | Major | User-generated frontend content is frequently rendered with `innerHTML`. | Frontend rendering modules | Fixed - Phase 4 added context escaping, identifier/CSS guards, URL allowlisting, and handler regression tests. |
 | 10 | Major | Automated coverage is narrow and currently depends on an external Atlas database. | `backend/tests` | Fixed - Phase 5 uses an isolated memory database, 12 suites, and enforced 70% controller/service coverage thresholds. |
-| 11 | Major | CI and container-based local setup are missing. | Repository root | Open - Phase 6 |
+| 11 | Major | CI and container-based local setup are missing. | Repository root | Fixed - Phase 6 added Docker, Compose, ESLint, and GitHub Actions lint/test/build checks. |
 | 12 | Minor | Generated APK binary was committed. | `mobile/CricZone-debug.apk` | Fixed - Phase 1 |
 | 13 | Minor | Empty, unused model file was committed. | `backend/models/matchModel.js` | Fixed - Phase 1 |
 | 14 | Minor | bcrypt work factor is 10. | `backend/models/User.js` | Fixed - increased to 12 in Phase 2. |
@@ -63,6 +63,13 @@ owner before repository cleanup began.
 - Tests exposed and fixed a missing tournament-standings ownership check and a Zod/Mongoose `minPlayers` mismatch.
 - The full coverage run passes 26/26 tests across 12 suites: 74.59% lines overall, 72.21% controller lines, and 80.13% service lines.
 - Jest now enforces at least 70% statements/lines globally and for controllers/services, plus 70% functions for controllers/services.
+
+## Phase 6 Notes
+
+- Added a multi-stage Node 18 Alpine production image and a local Compose stack with MongoDB 8.0 and a persistent volume.
+- Added ESLint 9.39.4, the current line compatible with Node 18, and fixed four unused-code findings.
+- Added GitHub Actions jobs for linting, coverage tests, and a clean production dependency install/audit on pushes to `main` and all pull requests.
+- ESLint, all 26 tests, YAML lint, Dockerfile lint, clean production install, and production audit pass. Docker is not installed on the audit workstation, so an actual image build could not be executed locally.
 
 ## Decisions Needed
 
