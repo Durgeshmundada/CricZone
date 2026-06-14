@@ -56,7 +56,7 @@ async function loadTurfs() {
           <p><strong>Surface:</strong> ${escapeHtml(surfaceType)}</p>
           <p><strong>Price:</strong> INR ${escapeHtml(pricePerSlot)}</p>
           <p><strong>Owner:</strong> ${escapeHtml(ownerName)}</p>
-          <button class="book-btn" data-book-turf-id="${escapeHtml(turfId)}">Book Now</button>
+          <button type="button" class="book-btn" data-book-turf-id="${escapeHtml(turfId)}">Book Now</button>
         </div>
       `;
       turfCard.querySelector("[data-book-turf-id]")?.addEventListener("click", () => bookTurf(turfId));
@@ -133,4 +133,3 @@ window.bookTurf = bookTurf;
 // ============================================
 // LOAD TOURNAMENT OPTIONS
 // ============================================
-

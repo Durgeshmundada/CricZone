@@ -21,32 +21,32 @@
 </head>
 <body>
 
-  <div id="errorBanner" class="error-banner" style="display:none"></div>
+  <div id="errorBanner" class="error-banner" role="alert" aria-live="assertive" style="display:none"></div>
   <div class="backdrop-grid" aria-hidden="true"></div>
 
-  <nav class="navbar">
+  <nav class="navbar" aria-label="Primary navigation">
     <div class="nav-container">
-      <div class="nav-brand" data-page="home" role="button" tabindex="0">
+      <button class="nav-brand" type="button" data-page="home" aria-label="CricZone home">
         <span class="brand-icon">CZ</span>
         <span class="brand-name">CricZone</span>
-      </div>
+      </button>
 
-      <button id="menuToggle" class="menu-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false">
+      <button id="menuToggle" class="menu-toggle" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="navMenu">
         <span></span>
         <span></span>
       </button>
 
       <div class="nav-menu" id="navMenu">
         <ul class="nav-links">
-          <li><a class="nav-link" data-page="home">Home</a></li>
-          <li><a class="nav-link" data-page="players">Players</a></li>
-          <li><a class="nav-link" data-page="teams">Teams</a></li>
-          <li><a class="nav-link" data-page="host-match">Host Match</a></li>
-          <li><a class="nav-link" data-page="my-matches">My Matches</a></li>
-          <li><a class="nav-link" data-page="tournaments">Tournaments</a></li>
-          <li><a class="nav-link" data-page="my-stats">My Stats</a></li>
-          <li><a class="nav-link" data-page="book-turf">Book Turf</a></li>
-          <li><a class="nav-link" data-page="billing">Billing</a></li>
+          <li><a class="nav-link" href="#home" data-page="home">Home</a></li>
+          <li><a class="nav-link" href="#players" data-page="players">Players</a></li>
+          <li><a class="nav-link" href="#teams" data-page="teams">Teams</a></li>
+          <li><a class="nav-link" href="#host-match" data-page="host-match">Host Match</a></li>
+          <li><a class="nav-link" href="#my-matches" data-page="my-matches">My Matches</a></li>
+          <li><a class="nav-link" href="#tournaments" data-page="tournaments">Tournaments</a></li>
+          <li><a class="nav-link" href="#my-stats" data-page="my-stats">My Stats</a></li>
+          <li><a class="nav-link" href="#book-turf" data-page="book-turf">Book Turf</a></li>
+          <li><a class="nav-link" href="#billing" data-page="billing">Billing</a></li>
         </ul>
 
         <div class="nav-actions">
@@ -54,36 +54,38 @@
 
           <div class="nav-auth" id="navAuth" style="display: none">
             <span id="navUserEmail" class="user-email"></span>
-            <button id="logoutBtn" class="btn-logout">Logout</button>
+            <button id="logoutBtn" class="btn-logout" type="button">Logout</button>
           </div>
-          <a id="navLogin" class="nav-link" data-page="login">Login</a>
+          <a id="navLogin" class="nav-link" href="#login" data-page="login">Login</a>
         </div>
       </div>
     </div>
   </nav>
 
-  <div id="toastContainer" class="toast-container"></div>
+  <div id="toastContainer" class="toast-container" aria-live="polite" aria-atomic="false"></div>
   <button id="installAppBtn" class="install-app-btn" type="button" style="display: none;">Install App</button>
 
 
-  <div id="customModal" class="custom-modal">
-    <div class="modal-overlay"></div>
-    <div class="modal-content">
+  <div id="customModal" class="custom-modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalMessage" aria-hidden="true" inert>
+    <div class="modal-overlay" aria-hidden="true"></div>
+    <div class="modal-content" tabindex="-1">
       <div class="modal-header">
-        <h3 id="modalTitle">Title</h3>
-        <button class="modal-close" id="modalClose">&times;</button>
+        <h2 id="modalTitle">Title</h2>
+        <button class="modal-close" id="modalClose" type="button" aria-label="Close dialog">&times;</button>
       </div>
       <div class="modal-body">
         <p id="modalMessage">Message</p>
+        <label class="visually-hidden" for="modalInput">Response</label>
         <input type="text" id="modalInput" class="modal-input" placeholder="Enter value..." />
       </div>
       <div class="modal-footer">
-        <button class="modal-btn modal-btn-secondary" id="modalCancel">Cancel</button>
-        <button class="modal-btn modal-btn-primary" id="modalConfirm">OK</button>
+        <button class="modal-btn modal-btn-secondary" id="modalCancel" type="button">Cancel</button>
+        <button class="modal-btn modal-btn-primary" id="modalConfirm" type="button">OK</button>
       </div>
     </div>
   </div>
 
+  <main id="mainContent">
   <div id="home" class="page">
     <section class="hero">
       <div class="hero-glow" aria-hidden="true"></div>
@@ -95,9 +97,9 @@
             Organize fixtures, update every ball in real-time, manage tournaments, and discover nearby turfs from one fast interface.
           </p>
           <div class="hero-buttons">
-            <button class="btn-primary" data-page="host-match">Host a Match</button>
+            <button class="btn-primary" type="button" data-page="host-match">Host a Match</button>
 
-            <button class="btn-secondary" data-page="book-turf">Book a Turf</button>
+            <button class="btn-secondary" type="button" data-page="book-turf">Book a Turf</button>
           </div>
           <div class="hero-metrics">
             <article class="metric-chip">
@@ -117,15 +119,15 @@
 
         <div class="hero-panels reveal">
           <article class="hero-panel">
-            <h3>Live Score Control</h3>
+            <h2>Live Score Control</h2>
             <p>Update runs, wickets, and overs instantly with a ball-by-ball control panel.</p>
           </article>
           <article class="hero-panel">
-            <h3>Tournament Operations</h3>
+            <h2>Tournament Operations</h2>
             <p>Publish schedules, track team participation, and keep standings visible.</p>
           </article>
           <article class="hero-panel">
-            <h3>Ground Discovery</h3>
+            <h2>Ground Discovery</h2>
             <p>Browse local turf listings and move from planning to booking in minutes.</p>
           </article>
         </div>
@@ -163,7 +165,7 @@
     <div class="container page-shell">
       <div class="section-head reveal">
         <p class="section-tag">Organizer Tools</p>
-        <h2 class="section-title">Host a Match</h2>
+        <h1 class="section-title">Host a Match</h1>
         <p class="section-description">Pick saved teams or enter custom lineups, then publish a fixture for live scoring.</p>
 
       </div>
@@ -172,13 +174,13 @@
         <h2 class="form-title">Create Match Setup</h2>
         <form id="hostMatchForm">
           <div class="form-group">
-            <label>Match Name</label>
+            <label for="matchName">Match Name</label>
             <input type="text" id="matchName" placeholder="e.g., Mumbai vs Delhi" required />
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>Match Type</label>
+              <label for="matchType">Match Type</label>
               <select id="matchType">
                 <option value="T20">T20 (20 Overs)</option>
                 <option value="ODI">ODI (50 Overs)</option>
@@ -187,18 +189,18 @@
               </select>
             </div>
             <div class="form-group" id="customOversGroup" style="display: none">
-              <label>Custom Overs</label>
+              <label for="customOvers">Custom Overs</label>
               <input type="number" id="customOvers" placeholder="e.g., 10" min="1" />
             </div>
           </div>
 
           <div class="form-row">
             <div class="form-group">
-              <label>Team A Name</label>
+              <label for="teamAName">Team A Name</label>
               <input type="text" id="teamAName" placeholder="Team A" required />
             </div>
             <div class="form-group">
-              <label>Team B Name</label>
+              <label for="teamBName">Team B Name</label>
               <input type="text" id="teamBName" placeholder="Team B" required />
             </div>
           </div>
@@ -206,13 +208,13 @@
           <div class="form-row">
             <div class="form-group">
 
-              <label>Saved Team A (Optional)</label>
+              <label for="teamASelect">Saved Team A (Optional)</label>
               <select id="teamASelect">
                 <option value="">Custom (manual entry)</option>
               </select>
             </div>
             <div class="form-group">
-              <label>Saved Team B (Optional)</label>
+              <label for="teamBSelect">Saved Team B (Optional)</label>
               <select id="teamBSelect">
                 <option value="">Custom (manual entry)</option>
               </select>
@@ -221,14 +223,14 @@
 
 
           <div class="form-group">
-            <label>Team A Players (comma-separated)</label>
+            <label for="teamAPlayers">Team A Players (comma-separated)</label>
             <input type="text" id="teamAPlayers" placeholder="Virat|virat@email.com, Rahul, Player3" />
             <small class="input-help">Use <strong>Name|email</strong> to link a registered account, or just name for guest player.</small>
             <div id="teamAPlayingSelector" class="team-playing-selector"></div>
           </div>
 
           <div class="form-group">
-            <label>Team B Players (comma-separated)</label>
+            <label for="teamBPlayers">Team B Players (comma-separated)</label>
             <input type="text" id="teamBPlayers" placeholder="Rohit|rohit@email.com, Surya, Player3" />
             <small class="input-help">Linked accounts will be eligible for automatic match stat updates.</small>
             <div id="teamBPlayingSelector" class="team-playing-selector"></div>
@@ -236,17 +238,17 @@
 
           <div class="form-row">
             <div class="form-group">
-              <label>Venue</label>
+              <label for="venue">Venue</label>
               <input type="text" id="venue" placeholder="e.g., Wankhede Stadium" required />
             </div>
             <div class="form-group">
-              <label>Match Date</label>
+              <label for="matchDate">Match Date</label>
               <input type="date" id="matchDate" required />
             </div>
           </div>
 
           <div class="form-group">
-            <label>Tournament (Optional)</label>
+            <label for="tournamentSelect">Tournament (Optional)</label>
             <select id="tournamentSelect">
               <option value="">Not part of tournament</option>
             </select>
@@ -268,7 +270,7 @@
     <div class="container page-shell">
       <div class="section-head reveal">
         <p class="section-tag">Squad Management</p>
-        <h2 class="section-title">My Teams</h2>
+        <h1 class="section-title">My Teams</h1>
         <p class="section-description">Create reusable teams now, verify invites, and use them later in matches or tournaments.</p>
       </div>
 
@@ -276,17 +278,17 @@
         <h2 class="form-title">Create Reusable Team</h2>
         <div class="form-row">
           <div class="form-group">
-            <label>Team Name</label>
+            <label for="newReusableTeamName">Team Name</label>
             <input type="text" id="newReusableTeamName" placeholder="e.g., Mumbai Warriors" />
           </div>
           <div class="form-group">
-            <label>Team Players</label>
+            <label for="newReusableTeamPlayers">Team Players</label>
             <input type="text" id="newReusableTeamPlayers" placeholder="Player1|mail, Player2, Player3" />
           </div>
         </div>
 
         <div class="form-group">
-          <label>Suggest Players To Add</label>
+          <label for="teamPlayerSuggestionQuery">Suggest Players To Add</label>
           <div class="form-row">
             <input type="text" id="teamPlayerSuggestionQuery" placeholder="Search player by name or email" />
             <button type="button" id="searchTeamSuggestionsBtn" class="btn-secondary">Find Players</button>
@@ -299,7 +301,7 @@
         <button type="button" id="createReusableTeamBtn" class="submit-btn">Save Reusable Team</button>
       </div>
 
-      <div class="form-card reveal" style="margin-top: 1rem;">
+      <div class="form-card reveal team-invitations-card">
         <h2 class="form-title">Pending Team Verifications</h2>
         <p class="section-description">If someone added your account to a team, accept or reject here.</p>
         <div id="teamInvitationsList">
@@ -314,12 +316,12 @@
     <div class="container page-shell">
       <div class="section-head reveal">
         <p class="section-tag">Competitive Ecosystem</p>
-        <h2 class="section-title">Tournaments</h2>
+        <h1 class="section-title">Tournaments</h1>
         <p class="section-description">Follow event progression and publish new tournament brackets.</p>
       </div>
 
       <div class="action-row reveal">
-        <button id="createTournamentBtn" class="submit-btn">Create New Tournament</button>
+        <button id="createTournamentBtn" class="submit-btn" type="button">Create New Tournament</button>
       </div>
 
       <div id="tournamentsList"></div>
@@ -331,7 +333,7 @@
     <div class="container page-shell">
       <div class="section-head reveal">
         <p class="section-tag">Personal Dashboard</p>
-        <h2 class="section-title">My Matches</h2>
+        <h1 class="section-title">My Matches</h1>
         <p class="section-description">See matches you created or joined with your linked player account.</p>
       </div>
       <div id="myMatchesGrid" class="matches-grid reveal">
@@ -344,11 +346,12 @@
     <div class="container page-shell">
       <div class="section-head reveal">
         <p class="section-tag">Player Discovery</p>
-        <h2 class="section-title">Search Players</h2>
+        <h1 class="section-title">Search Players</h1>
         <p class="section-description">Find local cricketers by name and review quick career stats.</p>
       </div>
 
       <form id="playersSearchForm" class="players-search reveal">
+        <label class="visually-hidden" for="playersSearchInput">Search players by name</label>
         <input type="text" id="playersSearchInput" placeholder="Search by player name..." />
         <button type="submit" id="playersSearchBtn" class="submit-btn">Search</button>
       </form>
@@ -363,7 +366,7 @@
     <div class="container page-shell">
       <div class="section-head reveal">
         <p class="section-tag">Player Profile</p>
-        <h2 class="section-title">My Stats</h2>
+        <h1 class="section-title">My Stats</h1>
         <p class="section-description">View account details and quick performance indicators.</p>
       </div>
 
@@ -373,31 +376,31 @@
 
       <div class="stats-grid reveal">
         <div class="stat-card">
-          <h4>Matches Played</h4>
+          <p class="stat-label">Matches Played</p>
           <p id="statMatchesPlayed">0</p>
         </div>
         <div class="stat-card">
-          <h4>Win Rate</h4>
+          <p class="stat-label">Win Rate</p>
           <p id="statWinRate">0%</p>
         </div>
         <div class="stat-card">
-          <h4>Followers</h4>
+          <p class="stat-label">Followers</p>
           <p id="statFollowers">0</p>
         </div>
         <div class="stat-card">
-          <h4>Wins</h4>
+          <p class="stat-label">Wins</p>
           <p id="statWins">0</p>
         </div>
         <div class="stat-card">
-          <h4>Losses</h4>
+          <p class="stat-label">Losses</p>
           <p id="statLosses">0</p>
         </div>
         <div class="stat-card">
-          <h4>Runs</h4>
+          <p class="stat-label">Runs</p>
           <p id="statRuns">0</p>
         </div>
         <div class="stat-card">
-          <h4>Wickets</h4>
+          <p class="stat-label">Wickets</p>
           <p id="statWickets">0</p>
         </div>
       </div>
@@ -409,7 +412,7 @@
     <div class="container page-shell">
       <div class="section-head reveal">
         <p class="section-tag">Ground Booking</p>
-        <h2 class="section-title">Book Turf</h2>
+        <h1 class="section-title">Book Turf</h1>
         <p class="section-description">Find available grounds by location, pricing, and sports support.</p>
       </div>
 
@@ -423,18 +426,18 @@
     <div class="container page-shell">
       <div class="section-head reveal">
         <p class="section-tag">Finance Center</p>
-        <h2 class="section-title">Billing</h2>
+        <h1 class="section-title">Billing</h1>
         <p class="section-description">Track invoices, payment status, and download billing reports.</p>
       </div>
 
       <div class="billing-controls reveal">
         <div class="form-row">
           <div class="form-group">
-            <label>From Date</label>
+            <label for="billingFromDate">From Date</label>
             <input type="date" id="billingFromDate" />
           </div>
           <div class="form-group">
-            <label>To Date</label>
+            <label for="billingToDate">To Date</label>
             <input type="date" id="billingToDate" />
           </div>
         </div>
@@ -445,25 +448,26 @@
       </div>
 
       <div id="billingSummaryCards" class="stats-grid reveal">
-        <div class="stat-card"><h4>Booked</h4><p>0</p></div>
-        <div class="stat-card"><h4>Paid</h4><p>0</p></div>
-        <div class="stat-card"><h4>Pending</h4><p>0</p></div>
+        <div class="stat-card"><p class="stat-label">Booked</p><p>0</p></div>
+        <div class="stat-card"><p class="stat-label">Paid</p><p>0</p></div>
+        <div class="stat-card"><p class="stat-label">Pending</p><p>0</p></div>
       </div>
 
       <div class="scoreboard-panel reveal billing-table-panel">
-        <h3>Invoices</h3>
+        <h2>Invoices</h2>
         <div class="table-wrap">
           <table class="score-table billing-table">
+            <caption class="visually-hidden">Booking invoices and payment status</caption>
             <thead>
               <tr>
-                <th>Invoice</th>
-                <th>Turf</th>
-                <th>User</th>
-                <th>Slot</th>
-                <th>Amount</th>
-                <th>Booking</th>
-                <th>Payment</th>
-                <th>Action</th>
+                <th scope="col">Invoice</th>
+                <th scope="col">Turf</th>
+                <th scope="col">User</th>
+                <th scope="col">Slot</th>
+                <th scope="col">Amount</th>
+                <th scope="col">Booking</th>
+                <th scope="col">Payment</th>
+                <th scope="col">Action</th>
               </tr>
             </thead>
             <tbody id="billingTableBody">
@@ -479,23 +483,23 @@
   <div id="login" class="page">
     <div class="container page-shell">
       <div class="form-card auth-card reveal">
-        <h2 class="form-title">Login to CricZone</h2>
+        <h1 class="form-title">Login to CricZone</h1>
         <form id="loginForm">
 
           <div class="form-group">
             <label for="loginEmail">Email</label>
-            <input type="email" id="loginEmail" placeholder="Enter your email" required aria-required="true" aria-label="Email" pattern="^\S+@\S+\.\S+$" />
+            <input type="email" id="loginEmail" placeholder="Enter your email" required aria-required="true" autocomplete="email" pattern="^\S+@\S+\.\S+$" />
           </div>
 
           <div class="form-group">
             <label for="loginPassword">Password</label>
-            <input type="password" id="loginPassword" placeholder="Enter your password" required aria-required="true" aria-label="Password" minlength="6" />
+            <input type="password" id="loginPassword" placeholder="Enter your password" required aria-required="true" autocomplete="current-password" minlength="6" />
           </div>
 
           <button type="submit" class="submit-btn">Login</button>
         </form>
         <p class="auth-switch">
-          Do not have an account? <a href="#" data-page="signup">Sign Up</a>
+          Do not have an account? <a href="#signup" data-page="signup">Sign Up</a>
         </p>
       </div>
     </div>
@@ -504,33 +508,33 @@
   <div id="signup" class="page">
     <div class="container page-shell">
       <div class="form-card auth-card reveal">
-        <h2 class="form-title">Create CricZone Account</h2>
+        <h1 class="form-title">Create CricZone Account</h1>
         <form id="signupForm">
 
           <div class="form-group">
             <label for="signupName">Name</label>
-            <input type="text" id="signupName" placeholder="Enter your name" required aria-required="true" aria-label="Name" />
+            <input type="text" id="signupName" placeholder="Enter your name" required aria-required="true" autocomplete="name" />
           </div>
 
           <div class="form-group">
             <label for="signupEmail">Email</label>
-            <input type="email" id="signupEmail" placeholder="Enter your email" required aria-required="true" aria-label="Email" pattern="^\S+@\S+\.\S+$" />
+            <input type="email" id="signupEmail" placeholder="Enter your email" required aria-required="true" autocomplete="email" pattern="^\S+@\S+\.\S+$" />
           </div>
 
           <div class="form-group">
             <label for="signupPhone">Phone</label>
-            <input type="tel" id="signupPhone" placeholder="Enter your phone number" required aria-required="true" aria-label="Phone" pattern="^[0-9]{10,15}$" />
+            <input type="tel" id="signupPhone" placeholder="Enter your phone number" required aria-required="true" autocomplete="tel" pattern="^[0-9]{10,15}$" />
           </div>
 
           <div class="form-group">
             <label for="signupPassword">Password</label>
-            <input type="password" id="signupPassword" placeholder="Create a password (min 6 characters)" required aria-required="true" aria-label="Password" minlength="6" />
+            <input type="password" id="signupPassword" placeholder="Create a password (min 6 characters)" required aria-required="true" autocomplete="new-password" minlength="6" />
           </div>
 
           <button type="submit" class="submit-btn">Sign Up</button>
         </form>
         <p class="auth-switch">
-          Already have an account? <a href="#" data-page="login">Login</a>
+          Already have an account? <a href="#login" data-page="login">Login</a>
         </p>
       </div>
     </div>
@@ -539,13 +543,13 @@
   <div id="ball-scoring" class="page">
     <div class="container page-shell">
       <div class="scoring-header">
-        <button id="backToHome" class="back-btn">Back</button>
-        <h2 id="scoringMatchName">Match Name</h2>
+        <button id="backToHome" class="back-btn" type="button">Back</button>
+        <h1 id="scoringMatchName">Match Name</h1>
       </div>
 
       <div class="score-display">
         <div class="team-score">
-          <h3 id="teamBattingName">Team A</h3>
+          <h2 id="teamBattingName">Team A</h2>
           <div class="big-score">
             <span id="currentRuns">0</span>/<span id="currentWickets">0</span>
           </div>
@@ -558,24 +562,24 @@
         <div class="batsman">
           <div class="player-line">
             <p><strong>Striker:</strong> <span id="strikerName">-</span></p>
-            <button id="changeStrikerBtn" class="change-player-btn">Swap</button>
+            <button id="changeStrikerBtn" class="change-player-btn" type="button">Swap</button>
           </div>
           <p><span id="strikerRuns">0</span> (<span id="strikerBalls">0</span>)</p>
         </div>
         <div class="batsman">
           <div class="player-line">
             <p><strong>Non-Striker:</strong> <span id="nonStrikerName">-</span></p>
-            <button id="changeNonStrikerBtn" class="change-player-btn">Swap</button>
+            <button id="changeNonStrikerBtn" class="change-player-btn" type="button">Swap</button>
           </div>
           <p><span id="nonStrikerRuns">0</span> (<span id="nonStrikerBalls">0</span>)</p>
         </div>
-        <button id="swapBatsmenBtn" class="swap-batsmen-btn">Swap Batsmen</button>
+        <button id="swapBatsmenBtn" class="swap-batsmen-btn" type="button">Swap Batsmen</button>
       </div>
 
       <div class="bowler-display">
         <div class="player-line">
           <p><strong>Bowler:</strong> <span id="bowlerName">-</span></p>
-          <button id="changeBowlerBtn" class="change-player-btn">Swap</button>
+          <button id="changeBowlerBtn" class="change-player-btn" type="button">Swap</button>
         </div>
         <p><span id="bowlerOvers">0.0</span> overs, <span id="bowlerRuns">0</span> runs, <span id="bowlerWickets">0</span> wickets</p>
       </div>
@@ -599,18 +603,19 @@
 
       <div class="detailed-scoreboard">
         <div class="scoreboard-panel">
-          <h3>Batting</h3>
+          <h2>Batting</h2>
           <div class="table-wrap">
             <table class="score-table">
+              <caption class="visually-hidden">Batting scorecard</caption>
               <thead>
                 <tr>
-                  <th>Batsman</th>
-                  <th>R</th>
-                  <th>B</th>
-                  <th>4s</th>
-                  <th>6s</th>
-                  <th>SR</th>
-                  <th>Dismissal</th>
+                  <th scope="col">Batsman</th>
+                  <th scope="col">R</th>
+                  <th scope="col">B</th>
+                  <th scope="col">4s</th>
+                  <th scope="col">6s</th>
+                  <th scope="col">SR</th>
+                  <th scope="col">Dismissal</th>
                 </tr>
               </thead>
               <tbody id="batsmanStatsBody">
@@ -621,18 +626,19 @@
         </div>
 
         <div class="scoreboard-panel">
-          <h3>Bowling</h3>
+          <h2>Bowling</h2>
           <div class="table-wrap">
             <table class="score-table">
+              <caption class="visually-hidden">Bowling scorecard</caption>
               <thead>
                 <tr>
-                  <th>Bowler</th>
-                  <th>O</th>
-                  <th>R</th>
-                  <th>W</th>
-                  <th>Eco</th>
-                  <th>WD</th>
-                  <th>NB</th>
+                  <th scope="col">Bowler</th>
+                  <th scope="col">O</th>
+                  <th scope="col">R</th>
+                  <th scope="col">W</th>
+                  <th scope="col">Eco</th>
+                  <th scope="col">WD</th>
+                  <th scope="col">NB</th>
                 </tr>
               </thead>
               <tbody id="bowlerStatsBody">
@@ -643,7 +649,7 @@
         </div>
 
         <div class="scoreboard-panel">
-          <h3>Fall of Wickets</h3>
+          <h2>Fall of Wickets</h2>
           <ul id="fallOfWicketsList" class="fow-list">
             <li>No wickets yet.</li>
           </ul>
@@ -652,32 +658,34 @@
 
 
       <div class="scoring-pad">
-        <h3>Record Ball</h3>
+        <h2>Record Ball</h2>
 
         <div class="runs-buttons">
-          <button class="run-btn" data-runs="0">0</button>
-          <button class="run-btn" data-runs="1">1</button>
-          <button class="run-btn" data-runs="2">2</button>
-          <button class="run-btn" data-runs="3">3</button>
-          <button class="run-btn four-btn" data-runs="4">4</button>
-          <button class="run-btn six-btn" data-runs="6">6</button>
+          <button class="run-btn" type="button" data-runs="0" aria-label="Record dot ball">0</button>
+          <button class="run-btn" type="button" data-runs="1" aria-label="Record 1 run">1</button>
+          <button class="run-btn" type="button" data-runs="2" aria-label="Record 2 runs">2</button>
+          <button class="run-btn" type="button" data-runs="3" aria-label="Record 3 runs">3</button>
+          <button class="run-btn four-btn" type="button" data-runs="4" aria-label="Record 4 runs">4</button>
+          <button class="run-btn six-btn" type="button" data-runs="6" aria-label="Record 6 runs">6</button>
         </div>
 
         <div class="extras-buttons">
-          <button class="extra-btn" data-extra="wd">WD (Wide)</button>
-          <button class="extra-btn" data-extra="nb">NB (No Ball)</button>
-          <button class="extra-btn" data-extra="bye">BYE</button>
-          <button class="extra-btn" data-extra="lb">LB (Leg Bye)</button>
+          <button class="extra-btn" type="button" data-extra="wd">WD (Wide)</button>
+          <button class="extra-btn" type="button" data-extra="nb">NB (No Ball)</button>
+          <button class="extra-btn" type="button" data-extra="bye">BYE</button>
+          <button class="extra-btn" type="button" data-extra="lb">LB (Leg Bye)</button>
         </div>
 
         <div class="wicket-buttons">
-          <button id="wicketBtn" class="wicket-btn">OUT</button>
-          <button id="undoBtn" class="undo-btn">UNDO</button>
+          <button id="wicketBtn" class="wicket-btn" type="button">OUT</button>
+          <button id="undoBtn" class="undo-btn" type="button">UNDO</button>
         </div>
       </div>
 
     </div>
   </div>
+
+  </main>
 
   <footer class="site-footer">
     <p>Built for local cricket communities. <span id="footerYear"></span></p>

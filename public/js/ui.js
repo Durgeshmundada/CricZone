@@ -1,6 +1,7 @@
 class CustomModal {
   constructor() {
     this.modal = document.getElementById('customModal');
+    this.content = this.modal.querySelector('.modal-content');
     this.title = document.getElementById('modalTitle');
     this.message = document.getElementById('modalMessage');
     this.input = document.getElementById('modalInput');
@@ -8,126 +9,131 @@ class CustomModal {
     this.cancelBtn = document.getElementById('modalCancel');
     this.closeBtn = document.getElementById('modalClose');
     this.overlay = this.modal.querySelector('.modal-overlay');
-    
+    this.currentDialog = null;
+    this.lastFocusedElement = null;
+    this.handleKeydown = this.handleKeydown.bind(this);
+
     this.setupEventListeners();
   }
 
   setupEventListeners() {
-    this.closeBtn.addEventListener('click', () => this.close());
-    this.overlay.addEventListener('click', () => this.close());
-    this.cancelBtn.addEventListener('click', () => this.close());
+    this.closeBtn.addEventListener('click', () => this.finish(false));
+    this.overlay.addEventListener('click', () => this.finish(false));
+    this.cancelBtn.addEventListener('click', () => this.finish(false));
+    this.confirmBtn.addEventListener('click', () => this.finish(true));
+    this.input.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        this.finish(true);
+      }
+    });
   }
 
   open() {
+    this.lastFocusedElement = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
     this.modal.classList.add('active');
+    this.modal.removeAttribute('inert');
+    this.modal.setAttribute('aria-hidden', 'false');
     document.body.style.overflow = 'hidden';
+    document.addEventListener('keydown', this.handleKeydown);
+
+    const initialFocus = this.input.classList.contains('hidden') ? this.confirmBtn : this.input;
+    requestAnimationFrame(() => initialFocus.focus());
   }
 
   close() {
     this.modal.classList.remove('active');
+    this.modal.setAttribute('aria-hidden', 'true');
+    this.modal.setAttribute('inert', '');
     document.body.style.overflow = '';
     this.input.value = '';
+    document.removeEventListener('keydown', this.handleKeydown);
+
+    const focusTarget = this.lastFocusedElement;
+    this.lastFocusedElement = null;
+    if (focusTarget && document.contains(focusTarget)) {
+      setTimeout(() => focusTarget.focus(), 0);
+    }
+  }
+
+  getFocusableElements() {
+    return [...this.content.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])'
+    )].filter((element) => !element.classList.contains('hidden') && element.offsetParent !== null);
+  }
+
+  handleKeydown(event) {
+    if (!this.currentDialog) return;
+
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.finish(false);
+      return;
+    }
+
+    if (event.key !== 'Tab') return;
+    const focusable = this.getFocusableElements();
+    if (focusable.length === 0) {
+      event.preventDefault();
+      this.content.focus();
+      return;
+    }
+
+    const first = focusable[0];
+    const last = focusable[focusable.length - 1];
+    if (!this.content.contains(document.activeElement)) {
+      event.preventDefault();
+      (event.shiftKey ? last : first).focus();
+    } else if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  }
+
+  show(type, title, message, placeholder = '') {
+    return new Promise((resolve) => {
+      this.title.textContent = title;
+      this.message.textContent = message;
+      this.input.classList.toggle('hidden', type !== 'prompt');
+      this.input.placeholder = placeholder;
+      this.input.value = '';
+      this.cancelBtn.classList.toggle('hidden', type === 'alert');
+      this.confirmBtn.textContent = type === 'confirm' ? 'Confirm' : 'OK';
+      this.currentDialog = { type, resolve };
+      this.open();
+    });
+  }
+
+  finish(confirmed) {
+    if (!this.currentDialog) return;
+
+    const { type, resolve } = this.currentDialog;
+    this.currentDialog = null;
+    const result = type === 'prompt'
+      ? (confirmed ? this.input.value.trim() || null : null)
+      : type === 'confirm'
+        ? Boolean(confirmed)
+        : true;
+
+    this.close();
+    resolve(result);
   }
 
   alert(title, message) {
-    return new Promise((resolve) => {
-      this.title.textContent = title;
-      this.message.textContent = message;
-      this.input.classList.add('hidden');
-      this.cancelBtn.classList.add('hidden');
-      this.confirmBtn.textContent = 'OK';
-      
-      this.open();
-      
-      const handleConfirm = () => {
-        this.confirmBtn.removeEventListener('click', handleConfirm);
-        this.close();
-        resolve(true);
-      };
-      
-      this.confirmBtn.addEventListener('click', handleConfirm);
-    });
+    return this.show('alert', title, message);
   }
 
   confirm(title, message) {
-    return new Promise((resolve) => {
-      this.title.textContent = title;
-      this.message.textContent = message;
-      this.input.classList.add('hidden');
-      this.cancelBtn.classList.remove('hidden');
-      this.confirmBtn.textContent = 'Confirm';
-      
-      this.open();
-      
-      const handleConfirm = () => {
-        cleanup();
-        this.close();
-        resolve(true);
-      };
-      
-      const handleCancel = () => {
-        cleanup();
-        this.close();
-        resolve(false);
-      };
-      
-      const cleanup = () => {
-        this.confirmBtn.removeEventListener('click', handleConfirm);
-        this.cancelBtn.removeEventListener('click', handleCancel);
-        this.closeBtn.removeEventListener('click', handleCancel);
-      };
-      
-      this.confirmBtn.addEventListener('click', handleConfirm);
-      this.cancelBtn.addEventListener('click', handleCancel);
-      this.closeBtn.addEventListener('click', handleCancel);
-    });
+    return this.show('confirm', title, message);
   }
 
   prompt(title, message, placeholder = '') {
-    return new Promise((resolve) => {
-      this.title.textContent = title;
-      this.message.textContent = message;
-      this.input.classList.remove('hidden');
-      this.input.placeholder = placeholder;
-      this.input.value = '';
-      this.cancelBtn.classList.remove('hidden');
-      this.confirmBtn.textContent = 'OK';
-      
-      this.open();
-      
-      setTimeout(() => this.input.focus(), 100);
-      
-      const handleConfirm = () => {
-        const value = this.input.value.trim();
-        cleanup();
-        this.close();
-        resolve(value || null);
-      };
-      
-      const handleCancel = () => {
-        cleanup();
-        this.close();
-        resolve(null);
-      };
-      
-      const handleEnter = (e) => {
-        if (e.key === 'Enter') {
-          handleConfirm();
-        }
-      };
-      
-      const cleanup = () => {
-        this.confirmBtn.removeEventListener('click', handleConfirm);
-        this.cancelBtn.removeEventListener('click', handleCancel);
-        this.closeBtn.removeEventListener('click', handleCancel);
-        this.input.removeEventListener('keypress', handleEnter);
-      };
-      
-      this.confirmBtn.addEventListener('click', handleConfirm);
-      this.cancelBtn.addEventListener('click', handleCancel);
-      this.closeBtn.addEventListener('click', handleCancel);
-      this.input.addEventListener('keypress', handleEnter);
-    });
+    return this.show('prompt', title, message, placeholder);
   }
 }
 
@@ -219,4 +225,3 @@ function formatPrizePool(prizePool) {
 
   return "TBD";
 }
-

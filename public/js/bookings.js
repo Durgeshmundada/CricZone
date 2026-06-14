@@ -5,20 +5,20 @@ function renderBillingSummary(summary = {}, role = "") {
   const formatMoney = (value) => `INR ${Number(value || 0).toFixed(2)}`;
   if (role === "admin" || role === "turf_owner") {
     container.innerHTML = `
-      <div class="stat-card"><h4>Booked</h4><p>${Number(summary.bookedCount || 0)}</p></div>
-      <div class="stat-card"><h4>Paid</h4><p>${formatMoney(summary.totalPaid)}</p></div>
-      <div class="stat-card"><h4>Pending</h4><p>${formatMoney(summary.totalPending)}</p></div>
-      <div class="stat-card"><h4>Refunded</h4><p>${formatMoney(summary.totalRefunded)}</p></div>
-      <div class="stat-card"><h4>Cancelled</h4><p>${Number(summary.cancelledCount || 0)}</p></div>
-      <div class="stat-card"><h4>Gross</h4><p>${formatMoney(summary.grossBooked)}</p></div>
+      <div class="stat-card"><p class="stat-label">Booked</p><p>${Number(summary.bookedCount || 0)}</p></div>
+      <div class="stat-card"><p class="stat-label">Paid</p><p>${formatMoney(summary.totalPaid)}</p></div>
+      <div class="stat-card"><p class="stat-label">Pending</p><p>${formatMoney(summary.totalPending)}</p></div>
+      <div class="stat-card"><p class="stat-label">Refunded</p><p>${formatMoney(summary.totalRefunded)}</p></div>
+      <div class="stat-card"><p class="stat-label">Cancelled</p><p>${Number(summary.cancelledCount || 0)}</p></div>
+      <div class="stat-card"><p class="stat-label">Gross</p><p>${formatMoney(summary.grossBooked)}</p></div>
     `;
     return;
   }
 
   container.innerHTML = `
-    <div class="stat-card"><h4>Total Bookings</h4><p>${Number(summary.totalBookings || 0)}</p></div>
-    <div class="stat-card"><h4>Total Paid</h4><p>${formatMoney(summary.totalPaid)}</p></div>
-    <div class="stat-card"><h4>Pending</h4><p>${formatMoney(summary.totalPending)}</p></div>
+    <div class="stat-card"><p class="stat-label">Total Bookings</p><p>${Number(summary.totalBookings || 0)}</p></div>
+    <div class="stat-card"><p class="stat-label">Total Paid</p><p>${formatMoney(summary.totalPaid)}</p></div>
+    <div class="stat-card"><p class="stat-label">Pending</p><p>${formatMoney(summary.totalPending)}</p></div>
   `;
 }
 
@@ -45,7 +45,7 @@ function renderBillingTable(rows = [], role = "") {
 
     const paymentCell = canEditPayments
       ? `
-          <select class="billing-payment-select" data-booking-id="${escapeHtml(safeObjectId(booking._id))}">
+          <select class="billing-payment-select" aria-label="Payment status for ${invoice}" data-booking-id="${escapeHtml(safeObjectId(booking._id))}">
             <option value="pending" ${paymentStatus === "pending" ? "selected" : ""}>pending</option>
             <option value="paid" ${paymentStatus === "paid" ? "selected" : ""}>paid</option>
             <option value="refunded" ${paymentStatus === "refunded" ? "selected" : ""}>refunded</option>
@@ -55,7 +55,7 @@ function renderBillingTable(rows = [], role = "") {
       : `${escapeHtml(paymentStatus)} ${paymentMethod ? `(${paymentMethod})` : ""}`;
 
     const actionCell = canEditPayments
-      ? `<button class="billing-action-btn" data-update-payment-id="${escapeHtml(safeObjectId(booking._id))}">Update</button>`
+      ? `<button type="button" class="billing-action-btn" data-update-payment-id="${escapeHtml(safeObjectId(booking._id))}">Update</button>`
       : "-";
 
     return `
@@ -217,5 +217,3 @@ async function loadBillingDashboard() {
     renderBillingSummary({ totalBookings: 0, totalPaid: 0, totalPending: 0 }, role);
   }
 }
-
-

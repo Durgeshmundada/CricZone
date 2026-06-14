@@ -105,17 +105,18 @@ async function openTournamentJoinPanel(panel, tournament, onRegistered) {
 
     const minPlayers = Number(tournament?.minPlayers || 11);
     const maxPlayers = Number(tournament?.maxPlayers || 15);
+    const joinIdSuffix = safeObjectId(tournament?._id) || "current";
 
     panel.innerHTML = `
       <form data-tournament-join-form>
         <div class="form-group">
-          <label>Select My Team</label>
-          <select data-join-team-select>
+          <label for="joinTeam-${joinIdSuffix}">Select My Team</label>
+          <select id="joinTeam-${joinIdSuffix}" data-join-team-select>
             ${teamOptions.map((entry) => `<option value="${escapeHtml(safeObjectId(entry.team._id))}">${escapeHtml(entry.team.name)}</option>`).join("")}
           </select>
         </div>
         <div class="form-group">
-          <label>Choose Players</label>
+          <p class="selector-label">Choose Players</p>
           <div class="selector-actions" style="margin-bottom:0.45rem;">
             <button type="button" data-join-select="all">All</button>
             <button type="button" data-join-select="clear">Clear</button>
@@ -125,22 +126,22 @@ async function openTournamentJoinPanel(panel, tournament, onRegistered) {
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Captain</label>
-            <select data-join-captain required></select>
+            <label for="joinCaptain-${joinIdSuffix}">Captain</label>
+            <select id="joinCaptain-${joinIdSuffix}" data-join-captain required></select>
           </div>
           <div class="form-group">
-            <label>Vice Captain (Optional)</label>
-            <select data-join-vice-captain></select>
+            <label for="joinViceCaptain-${joinIdSuffix}">Vice Captain (Optional)</label>
+            <select id="joinViceCaptain-${joinIdSuffix}" data-join-vice-captain></select>
           </div>
         </div>
         <div class="form-row">
           <div class="form-group">
-            <label>Wicketkeeper (Optional)</label>
-            <select data-join-wicketkeeper></select>
+            <label for="joinWicketkeeper-${joinIdSuffix}">Wicketkeeper (Optional)</label>
+            <select id="joinWicketkeeper-${joinIdSuffix}" data-join-wicketkeeper></select>
           </div>
           <div class="form-group">
-            <label>Coach (Optional)</label>
-            <input type="text" data-join-coach placeholder="Coach name" />
+            <label for="joinCoach-${joinIdSuffix}">Coach (Optional)</label>
+            <input id="joinCoach-${joinIdSuffix}" type="text" data-join-coach placeholder="Coach name" />
           </div>
         </div>
         <div class="tournament-card-actions">
@@ -293,4 +294,3 @@ async function openTournamentJoinPanel(panel, tournament, onRegistered) {
 }
 
 // ============================================
-

@@ -24,6 +24,7 @@ owner before repository cleanup began.
 | 15 | Minor | Login attempts are not locked out. | User model and controller | Fixed - 15-minute lock after five failures in Phase 2. |
 | 17 | Major | Production dependencies initially reported nine known vulnerabilities, including JWT and Socket.io advisories. | `backend/package-lock.json` | Fixed - compatible dependency updates; `npm audit --omit=dev` reports zero vulnerabilities. |
 | 16 | Minor | Backend logging is unstructured. | Backend source | Fixed - Phase 7 added Pino JSON logging, readable development output, and request correlation IDs. |
+| 18 | Major | Existing pages had incomplete form labeling, heading hierarchy, keyboard focus handling, and mobile navigation semantics. | `public/index.html`, `public/styles.css`, frontend modules | Fixed - Phase 8 added accessible structure, visible focus, dialog focus management, contrast corrections, and keyboard-safe mobile navigation. |
 
 ## Phase 1 Notes
 
@@ -77,6 +78,14 @@ owner before repository cleanup began.
 - Added per-request UUIDs, trusted conservative inbound `X-Request-Id` values, child loggers, response headers, duration/status request logs, and automatic request IDs in every JSON error response.
 - Added regression coverage for propagated/generated request IDs. ESLint, all 26 tests, coverage thresholds, production JSON logging, and production dependency audit pass.
 - Sentry remains intentionally unconfigured because no `SENTRY_DSN` was supplied.
+
+## Phase 8 Notes
+
+- Associated every static form label with its control, corrected page heading hierarchy, added table captions/header scopes, and replaced the simulated brand button with a native control.
+- Added global `:focus-visible` treatment and reduced-motion support. Dark-theme text colors and primary/error backgrounds were adjusted to meet WCAG AA contrast targets.
+- Dialogs now use `aria-modal`, inert hidden state, initial-focus placement, a keyboard focus trap, Escape dismissal, and trigger-focus restoration.
+- Mobile navigation now exposes accurate expanded/hidden state, removes closed links from keyboard navigation, closes on Escape, and restores focus to the toggle.
+- HTML accessibility validation, Pa11y/Axe WCAG2AA scanning, managed-Chromium desktop/mobile checks, modal keyboard testing, and browser console checks pass. Axe's gradient-background contrast cases were manually reviewed because they are marked as needing human review.
 
 ## Decisions Needed
 

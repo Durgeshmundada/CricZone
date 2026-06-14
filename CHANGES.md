@@ -54,3 +54,11 @@
 - Replaced backend console logging with Pino JSON logs in production and readable development output.
 - Added generated or propagated request IDs, request-scoped child loggers, response headers, timing metadata, and correlation IDs in JSON errors.
 - Added `LOG_LEVEL` to the environment template and regression coverage for request-ID behavior.
+
+## Phase 8 - Accessibility
+
+- Corrected heading hierarchy, form label associations, table semantics, native control usage, live regions, and page/navigation state attributes.
+- Added visible keyboard focus styles, reduced-motion handling, and WCAG AA contrast improvements for the dark green theme.
+- Added inert dialog state, initial focus, focus trapping, Escape dismissal, and trigger-focus restoration.
+- Made the mobile navigation keyboard-safe with accurate expanded state, inert closed content, Escape handling, and focus restoration.
+- Added accessibility contract tests and verified the existing interface with HTML validation, Pa11y/Axe, and managed Chromium at desktop and mobile widths.

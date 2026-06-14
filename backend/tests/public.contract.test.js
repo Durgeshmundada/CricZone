@@ -16,6 +16,7 @@ const publicScriptPaths = [
   "app.js"
 ].map((fileName) => path.join(projectRoot, "public", "js", fileName));
 const runtimeConfigPath = path.join(projectRoot, "public", "runtime-config.js");
+const publicStylesPath = path.join(projectRoot, "public", "styles.css");
 const expectedPublicScriptSources = [
   "runtime-config.js",
   "js/api.js",
@@ -111,5 +112,41 @@ describe("public app shell contracts", () => {
     expect(script).toContain("function safeObjectId");
     expect(script).toContain("function sanitizeImageUrl");
     expect(script).not.toMatch(/data:image\\\/svg\+xml.*return raw/);
+  });
+
+  test("associates static labels and exposes accessible navigation and dialog semantics", () => {
+    const html = fs.readFileSync(publicIndexPath, "utf8");
+    const ids = new Set([...html.matchAll(/\sid="([^"]+)"/g)].map((match) => match[1]));
+    const labels = [...html.matchAll(/<label\b([^>]*)>/g)];
+
+    labels.forEach(([, attributes]) => {
+      const forMatch = attributes.match(/\sfor="([^"]+)"/);
+      expect(forMatch).not.toBeNull();
+      expect(ids.has(forMatch[1])).toBe(true);
+    });
+
+    expect(html).toContain('nav class="navbar" aria-label="Primary navigation"');
+    expect(html).toContain('href="#home" data-page="home"');
+    expect(html).toContain('role="dialog" aria-modal="true"');
+    expect(html).toMatch(/id="customModal"[^>]*\sinert(?:\s|>)/);
+    expect(html).toContain('id="modalClose" type="button" aria-label="Close dialog"');
+    expect(html).toContain('id="toastContainer" class="toast-container" aria-live="polite"');
+  });
+
+  test("keeps keyboard focus and reduced-motion accessibility protections", () => {
+    const script = readPublicScripts();
+    const styles = fs.readFileSync(publicStylesPath, "utf8");
+
+    expect(script).toContain("handleKeydown(event)");
+    expect(script).toContain("event.key === 'Escape'");
+    expect(script).toContain("event.key !== 'Tab'");
+    expect(script).toContain("lastFocusedElement");
+    expect(script).toContain("menuToggle.focus()");
+    expect(script).toContain("navMenu.toggleAttribute('inert', !active)");
+    expect(script).toContain("removeAttribute('inert')");
+    expect(script).toContain("setAttribute('inert', '')");
+    expect(script).toContain("focusTarget.focus()");
+    expect(styles).toContain(":focus-visible");
+    expect(styles).toContain("prefers-reduced-motion: reduce");
   });
 });

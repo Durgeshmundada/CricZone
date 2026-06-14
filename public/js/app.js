@@ -386,30 +386,30 @@ document.addEventListener("DOMContentLoaded", async () => {
         <h2 class="form-title">Create Tournament</h2>
         <form id="newTournamentForm">
           <div class="form-group">
-            <label>Tournament Name</label>
+            <label for="tournamentName">Tournament Name</label>
             <input type="text" id="tournamentName" required />
           </div>
           <div class="form-group">
-            <label>Description</label>
+            <label for="tournamentDesc">Description</label>
             <textarea id="tournamentDesc" rows="3"></textarea>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Start Date</label>
+              <label for="tournamentStartDate">Start Date</label>
               <input type="date" id="tournamentStartDate" required />
             </div>
             <div class="form-group">
-              <label>End Date</label>
+              <label for="tournamentEndDate">End Date</label>
               <input type="date" id="tournamentEndDate" required />
             </div>
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Venue</label>
+              <label for="tournamentVenue">Venue</label>
               <input type="text" id="tournamentVenue" required />
             </div>
             <div class="form-group">
-              <label>Format</label>
+              <label for="tournamentFormat">Format</label>
               <select id="tournamentFormat">
                 <option value="T20">T20</option>
                 <option value="ODI">ODI</option>
@@ -420,11 +420,11 @@ document.addEventListener("DOMContentLoaded", async () => {
           </div>
           <div class="form-row">
             <div class="form-group">
-              <label>Max Teams</label>
+              <label for="tournamentMaxTeams">Max Teams</label>
               <input type="number" id="tournamentMaxTeams" value="8" min="2" max="32" />
             </div>
             <div class="form-group">
-              <label>Prize Pool</label>
+              <label for="tournamentPrize">Prize Pool</label>
               <input type="text" id="tournamentPrize" placeholder="e.g., INR 50,000" />
             </div>
           </div>
