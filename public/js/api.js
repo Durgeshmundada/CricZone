@@ -288,7 +288,7 @@ function registerServiceWorker() {
 
   window.addEventListener("load", async () => {
     try {
-      const registration = await navigator.serviceWorker.register("/sw.js?v=7", {
+      const registration = await navigator.serviceWorker.register("/sw.js?v=8", {
         updateViaCache: "none"
       });
       await registration.update();

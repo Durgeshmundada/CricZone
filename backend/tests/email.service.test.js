@@ -23,6 +23,9 @@ describe("email service", () => {
       name: "Test Player",
       resetUrl: "https://example.test/#reset-password?token=abc123",
       expiresMinutes: 15
+    }, {
+      allowInTest: true,
+      fetchImpl: global.fetch
     });
 
     expect(result).toEqual({ delivered: true, provider: "resend" });

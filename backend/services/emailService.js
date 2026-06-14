@@ -9,16 +9,20 @@ const escapeHtml = (value) => String(value || "")
   .replaceAll('"', "&quot;")
   .replaceAll("'", "&#039;");
 
-const sendPasswordResetEmail = async ({ to, name, resetUrl, expiresMinutes }) => {
+const sendPasswordResetEmail = async (
+  { to, name, resetUrl, expiresMinutes },
+  { allowInTest = false, fetchImpl = fetch } = {}
+) => {
   const apiKey = String(process.env.RESEND_API_KEY || "").trim();
   const from = String(
     process.env.PASSWORD_RESET_FROM || "CricZone <onboarding@resend.dev>"
   ).trim();
 
+  if (process.env.NODE_ENV === "test" && !allowInTest) {
+    return { delivered: false, skipped: true };
+  }
+
   if (!apiKey) {
-    if (process.env.NODE_ENV === "test") {
-      return { delivered: false, skipped: true };
-    }
     throw new Error("RESEND_API_KEY is not configured");
   }
 
@@ -53,7 +57,7 @@ const sendPasswordResetEmail = async ({ to, name, resetUrl, expiresMinutes }) =>
   const timeout = setTimeout(() => controller.abort(), 10000);
 
   try {
-    const response = await fetch(RESEND_ENDPOINT, {
+    const response = await fetchImpl(RESEND_ENDPOINT, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${apiKey}`,
