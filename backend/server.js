@@ -16,6 +16,8 @@ dotenv.config();
 
 const connectDB = require("./config/db");
 const mongoSanitize = require("./middleware/mongoSanitize");
+const requestContext = require("./middleware/requestContext");
+const logger = require("./utils/logger");
 
 const app = express();
 const server = http.createServer(app);
@@ -100,6 +102,7 @@ const io = socketio(server, {
 // --------------- MIDDLEWARE ---------------
 app.disable("x-powered-by");
 app.set("trust proxy", 1);
+app.use(requestContext);
 app.use(helmet({
   contentSecurityPolicy: {
     useDefaults: true,
@@ -143,19 +146,6 @@ app.use((req, res, next) => {
   res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   next();
 });
-
-// Request logger (dev only)
-if (!isProduction) {
-  app.use((req, res, next) => {
-    const start = Date.now();
-    res.on("finish", () => {
-      const duration = Date.now() - start;
-      const prefix = req.path.startsWith("/api/") ? "API" : "WEB";
-      console.log(`${prefix} ${req.method} ${req.originalUrl} ${res.statusCode} ${duration}ms`);
-    });
-    next();
-  });
-}
 
 // --------------- ROUTES ---------------
 const userRoutes = require("./routes/userRoutes");
@@ -298,11 +288,11 @@ app.use((req, res) => {
   });
 });
 
-app.use((err, _req, res, _next) => {
+app.use((err, req, res, _next) => {
   const status = err.status || err.statusCode || 500;
   const message = err.message || "Internal server error";
   if (status >= 500) {
-    console.error("Server error:", err);
+    req.log.error({ err }, "server error");
   }
   res.status(status).json({
     success: false,
@@ -328,7 +318,7 @@ const startServer = async () => {
 
   await new Promise((resolve) => {
     server.listen(PORT, () => {
-      console.log(`Server started on http://localhost:${PORT} (${NODE_ENV})`);
+      logger.info({ port: PORT, environment: NODE_ENV }, "server started");
       resolve();
     });
   });
@@ -339,7 +329,7 @@ let shuttingDown = false;
 const gracefulShutdown = async (reason = "shutdown") => {
   if (shuttingDown) return;
   shuttingDown = true;
-  console.log(`Shutting down (${reason})...`);
+  logger.info({ reason }, "server shutting down");
 
   server.close(async () => {
     try {
@@ -358,7 +348,7 @@ const gracefulShutdown = async (reason = "shutdown") => {
 
 if (require.main === module) {
   startServer().catch((error) => {
-    console.error("Failed to start server:", error.message);
+    logger.fatal({ err: error }, "failed to start server");
     process.exit(1);
   });
 }
@@ -366,10 +356,10 @@ if (require.main === module) {
 process.on("SIGTERM", () => gracefulShutdown("SIGTERM"));
 process.on("SIGINT", () => gracefulShutdown("SIGINT"));
 process.on("unhandledRejection", (error) => {
-  console.error("Unhandled Promise Rejection:", error);
+  logger.error({ err: error }, "unhandled promise rejection");
 });
 process.on("uncaughtException", (error) => {
-  console.error("Uncaught Exception:", error);
+  logger.fatal({ err: error }, "uncaught exception");
   gracefulShutdown("uncaughtException");
 });
 

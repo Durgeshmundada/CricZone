@@ -6,10 +6,11 @@ const User = require('../models/User');
 const { configureMatchFromToss } = require('../services/matchSetupService');
 const { processScoreUpdate, completeMatchLogic } = require('../services/scoringService');
 const { getPagination, getPaginationMeta } = require('../utils/pagination');
+const { getRequestLogger } = require('../utils/logger');
 const isProduction = process.env.NODE_ENV === 'production';
 
 const sendServerError = (res, message, error) => {
-  console.error(`${message}:`, error);
+  getRequestLogger(res).error({ err: error }, message);
   return res.status(500).json({
     success: false,
     message,

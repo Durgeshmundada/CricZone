@@ -5,13 +5,14 @@ const validate = require("../middleware/validate");
 const schemas = require("../validation/schemas");
 const { getPagination, getPaginationMeta } = require("../utils/pagination");
 const Turf = require("../models/Turf");
+const { getRequestLogger } = require("../utils/logger");
 
 const isProduction = process.env.NODE_ENV === "production";
 const allowedSurfaceTypes = ["artificial grass", "natural grass", "synthetic"];
 const allowedSports = ["cricket", "football", "badminton", "tennis", "volleyball"];
 
 const sendServerError = (res, message, error) => {
-  console.error(`${message}:`, error);
+  getRequestLogger(res).error({ err: error }, message);
   return res.status(500).json({
     success: false,
     message,

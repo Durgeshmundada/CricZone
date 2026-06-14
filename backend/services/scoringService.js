@@ -2,6 +2,7 @@ const mongoose = require('mongoose');
 const Match = require('../models/Match');
 const Team = require('../models/Team');
 const User = require('../models/User');
+const logger = require('../utils/logger');
 const ServiceError = require('../utils/ServiceError');
 
 const isValidObjectId = (value) => mongoose.Types.ObjectId.isValid(String(value || ''));
@@ -1022,7 +1023,7 @@ async function updatePlayerStats(match) {
 
     match.statsProcessed = true;
   } catch (error) {
-    console.error('Error updating player stats:', error);
+    logger.error({ err: error }, 'error updating player stats');
   }
 }
 

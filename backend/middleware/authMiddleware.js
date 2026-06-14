@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const User = require("../models/User");
+const { getRequestLogger } = require("../utils/logger");
 
 const isProduction = process.env.NODE_ENV === "production";
 
@@ -20,7 +21,7 @@ const protect = async (req, res, next) => {
 
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
-      console.error("JWT_SECRET is not defined");
+      getRequestLogger(req).error("JWT_SECRET is not defined");
       return res.status(500).json({
         success: false,
         message: "Server configuration error"
@@ -39,7 +40,7 @@ const protect = async (req, res, next) => {
 
     return next();
   } catch (error) {
-    console.error("JWT middleware error:", error.message);
+    getRequestLogger(req).warn({ err: error }, "JWT authentication failed");
 
     if (error.name === "TokenExpiredError") {
       return res.status(401).json({

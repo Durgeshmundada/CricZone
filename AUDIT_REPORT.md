@@ -23,7 +23,7 @@ owner before repository cleanup began.
 | 14 | Minor | bcrypt work factor is 10. | `backend/models/User.js` | Fixed - increased to 12 in Phase 2. |
 | 15 | Minor | Login attempts are not locked out. | User model and controller | Fixed - 15-minute lock after five failures in Phase 2. |
 | 17 | Major | Production dependencies initially reported nine known vulnerabilities, including JWT and Socket.io advisories. | `backend/package-lock.json` | Fixed - compatible dependency updates; `npm audit --omit=dev` reports zero vulnerabilities. |
-| 16 | Minor | Backend logging is unstructured. | Backend source | Open - Phase 7 |
+| 16 | Minor | Backend logging is unstructured. | Backend source | Fixed - Phase 7 added Pino JSON logging, readable development output, and request correlation IDs. |
 
 ## Phase 1 Notes
 
@@ -70,6 +70,13 @@ owner before repository cleanup began.
 - Added ESLint 9.39.4, the current line compatible with Node 18, and fixed four unused-code findings.
 - Added GitHub Actions jobs for linting, coverage tests, and a clean production dependency install/audit on pushes to `main` and all pull requests.
 - ESLint, all 26 tests, YAML lint, Dockerfile lint, clean production install, and production audit pass. Docker is not installed on the audit workstation, so an actual image build could not be executed locally.
+
+## Phase 7 Notes
+
+- Replaced production `console` calls with Pino 9.14.0, the newest Pino 9 release selected for Node 18 compatibility; development uses `pino-pretty` and tests are silent.
+- Added per-request UUIDs, trusted conservative inbound `X-Request-Id` values, child loggers, response headers, duration/status request logs, and automatic request IDs in every JSON error response.
+- Added regression coverage for propagated/generated request IDs. ESLint, all 26 tests, coverage thresholds, production JSON logging, and production dependency audit pass.
+- Sentry remains intentionally unconfigured because no `SENTRY_DSN` was supplied.
 
 ## Decisions Needed
 

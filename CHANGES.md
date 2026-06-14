@@ -48,3 +48,9 @@
 - Added Node-aware ESLint checks and cleaned up unused backend code found by the new gate.
 - Added GitHub Actions jobs for lint, coverage tests, and clean production dependency installation/auditing.
 - Documented the Docker Compose local-development workflow in `SETUP_INSTRUCTIONS.md`.
+
+## Phase 7 - Structured Logging and Request Tracing
+
+- Replaced backend console logging with Pino JSON logs in production and readable development output.
+- Added generated or propagated request IDs, request-scoped child loggers, response headers, timing metadata, and correlation IDs in JSON errors.
+- Added `LOG_LEVEL` to the environment template and regression coverage for request-ID behavior.

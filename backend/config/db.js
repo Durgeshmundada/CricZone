@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const logger = require("../utils/logger");
 
 let listenersBound = false;
 
@@ -7,15 +8,15 @@ const bindConnectionListeners = () => {
   listenersBound = true;
 
   mongoose.connection.on("error", (err) => {
-    console.error("MongoDB connection error:", err.message);
+    logger.error({ err }, "MongoDB connection error");
   });
 
   mongoose.connection.on("disconnected", () => {
-    console.warn("MongoDB disconnected.");
+    logger.warn("MongoDB disconnected");
   });
 
   mongoose.connection.on("reconnected", () => {
-    console.log("MongoDB reconnected.");
+    logger.info("MongoDB reconnected");
   });
 };
 
@@ -26,7 +27,7 @@ const connectDB = async () => {
   }
 
   try {
-    console.log("Connecting to MongoDB...");
+    logger.info("connecting to MongoDB");
     const conn = await mongoose.connect(uri, {
       serverSelectionTimeoutMS: 10000,
       socketTimeoutMS: 45000,
@@ -35,7 +36,7 @@ const connectDB = async () => {
     });
 
     bindConnectionListeners();
-    console.log(`MongoDB connected: ${conn.connection.host}/${conn.connection.name}`);
+    logger.info({ host: conn.connection.host, database: conn.connection.name }, "MongoDB connected");
     return conn;
   } catch (error) {
     const message = error?.message || "Unknown database error";

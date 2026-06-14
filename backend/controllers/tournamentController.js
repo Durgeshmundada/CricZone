@@ -2,10 +2,11 @@ const mongoose = require("mongoose");
 const Tournament = require("../models/Tournament");
 const Team = require("../models/Team");
 const { getPagination, getPaginationMeta } = require("../utils/pagination");
+const { getRequestLogger } = require("../utils/logger");
 const isProduction = process.env.NODE_ENV === "production";
 
 const sendServerError = (res, message, error) => {
-  console.error(`${message}:`, error);
+  getRequestLogger(res).error({ err: error }, message);
   return res.status(500).json({
     success: false,
     message,

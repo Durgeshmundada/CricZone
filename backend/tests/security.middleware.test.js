@@ -4,9 +4,12 @@ const escapeRegex = require("../utils/escapeRegex");
 
 describe("security middleware", () => {
   test("sets an explicit content security policy", async () => {
-    const response = await request(app).get("/api/health");
+    const response = await request(app)
+      .get("/api/health")
+      .set("X-Request-Id", "audit-health-check");
 
     expect(response.status).toBe(200);
+    expect(response.headers["x-request-id"]).toBe("audit-health-check");
     expect(response.headers["content-security-policy"]).toContain("default-src 'self'");
     expect(response.headers["content-security-policy"]).toContain("fonts.googleapis.com");
   });
@@ -18,6 +21,8 @@ describe("security middleware", () => {
 
     expect(response.status).toBe(400);
     expect(response.body.message).toContain("Invalid request key");
+    expect(response.body.requestId).toBe(response.headers["x-request-id"]);
+    expect(response.body.requestId).toBeTruthy();
   });
 
   test("rejects privileged self-registration roles", async () => {
