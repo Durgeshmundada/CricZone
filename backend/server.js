@@ -18,6 +18,7 @@ const connectDB = require("./config/db");
 const mongoSanitize = require("./middleware/mongoSanitize");
 const requestContext = require("./middleware/requestContext");
 const logger = require("./utils/logger");
+const openApiDocument = require("./docs/openapi.json");
 
 const app = express();
 const server = http.createServer(app);
@@ -185,6 +186,10 @@ app.get("/api/ready", (_req, res) => {
 
 app.get("/api/version", (_req, res) => {
   res.json({ success: true, version: "1.0.0" });
+});
+
+app.get(["/api/docs", "/api/docs/openapi.json"], (_req, res) => {
+  res.json(openApiDocument);
 });
 
 // API routes

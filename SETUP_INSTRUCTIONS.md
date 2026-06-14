@@ -1,19 +1,33 @@
 # TurfBooking Setup and Deployment
 
-## Required environment variables (`backend/.env`)
+## Environment variables (`backend/.env`)
+
+Copy `backend/.env.example` to `backend/.env`. Do not commit the resulting file.
+
+| Variable | Required | Default | Description |
+|---|---:|---|---|
+| `MONGO_URI` | Yes | None | MongoDB connection string for the CricZone database. |
+| `JWT_SECRET` | Yes | None | Secret used to sign access tokens; use at least 32 random bytes. |
+| `JWT_ACCESS_EXPIRE` | No | `30m` | Access-token lifetime accepted by `jsonwebtoken`, such as `30m` or `1h`. |
+| `JWT_EXPIRE` | No | `30m` | Legacy alias used only when `JWT_ACCESS_EXPIRE` is unset. |
+| `JWT_REFRESH_EXPIRE_DAYS` | No | `14` | Refresh-session lifetime in days, clamped between 1 and 30. |
+| `PORT` | No | `5000` | HTTP port for Express and Socket.IO. |
+| `NODE_ENV` | No | `development` | Runtime mode: `development`, `test`, or `production`. |
+| `LOG_LEVEL` | No | `debug` in development, `info` in production | Pino logging threshold such as `debug`, `info`, `warn`, or `error`. |
+| `CLIENT_URL` | No | Local origins only | Comma-separated browser origins allowed by CORS. |
+| `ALLOW_ALL_ORIGINS` | No | `false` | Set to `true` only for an intentionally public development environment. |
+
+Minimum local example:
 
 ```env
 MONGO_URI=mongodb://localhost:27017/criczone
-JWT_SECRET=replace-with-a-strong-secret
+JWT_SECRET=replace-with-a-long-random-secret
 PORT=5000
 NODE_ENV=development
-CLIENT_URL=http://localhost:3000
+LOG_LEVEL=debug
+CLIENT_URL=http://localhost:5000
+ALLOW_ALL_ORIGINS=false
 ```
-
-Notes:
-- `MONGO_URI` and `JWT_SECRET` are required.
-- `PORT` defaults to `5000` if omitted.
-- `CLIENT_URL` can be a comma-separated list of allowed frontend origins.
 
 ## Local development
 
@@ -39,6 +53,7 @@ npx http-server public -p 3000
 
 4. Verify backend health:
 - `http://localhost:5000/api/health`
+- OpenAPI document: `http://localhost:5000/api/docs`
 
 ## Docker development
 

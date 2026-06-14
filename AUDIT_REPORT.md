@@ -25,6 +25,7 @@ owner before repository cleanup began.
 | 17 | Major | Production dependencies initially reported nine known vulnerabilities, including JWT and Socket.io advisories. | `backend/package-lock.json` | Fixed - compatible dependency updates; `npm audit --omit=dev` reports zero vulnerabilities. |
 | 16 | Minor | Backend logging is unstructured. | Backend source | Fixed - Phase 7 added Pino JSON logging, readable development output, and request correlation IDs. |
 | 18 | Major | Existing pages had incomplete form labeling, heading hierarchy, keyboard focus handling, and mobile navigation semantics. | `public/index.html`, `public/styles.css`, frontend modules | Fixed - Phase 8 added accessible structure, visible focus, dialog focus management, contrast corrections, and keyboard-safe mobile navigation. |
+| 19 | Minor | Root verification still parsed the deleted frontend monolith, and API/environment documentation was incomplete. | `package.json`, `README.md`, `SETUP_INSTRUCTIONS.md`, API routes | Fixed - Phase 9 checks every shipped script, documents all runtime variables, and serves a validated OpenAPI auth/match specification. |
 
 ## Phase 1 Notes
 
@@ -86,6 +87,14 @@ owner before repository cleanup began.
 - Dialogs now use `aria-modal`, inert hidden state, initial-focus placement, a keyboard focus trap, Escape dismissal, and trigger-focus restoration.
 - Mobile navigation now exposes accurate expanded/hidden state, removes closed links from keyboard navigation, closes on Escape, and restores focus to the toggle.
 - HTML accessibility validation, Pa11y/Axe WCAG2AA scanning, managed-Chromium desktop/mobile checks, modal keyboard testing, and browser console checks pass. Axe's gradient-background contrast cases were manually reviewed because they are marked as needing human review.
+
+## Phase 9 Notes
+
+- Expanded the root README with product features, architecture, quick-start, verification, API documentation, deployment, and mobile guidance; linked the complete setup guide.
+- Documented every runtime environment variable, including the preferred `JWT_ACCESS_EXPIRE`, legacy `JWT_EXPIRE`, refresh lifetime, logging, and CORS controls.
+- Added a checked-in OpenAPI 3.0 document for the authentication and match APIs and exposed it at `/api/docs` and `/api/docs/openapi.json` without adding a runtime dependency.
+- Added a dedicated documentation endpoint test and validated the specification with Redocly CLI.
+- Replaced the stale `public/script.js` syntax check with a cross-platform script that parses all 11 shipped browser/service-worker files. Root `npm run verify` is functional again.
 
 ## Decisions Needed
 

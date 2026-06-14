@@ -62,3 +62,10 @@
 - Added inert dialog state, initial focus, focus trapping, Escape dismissal, and trigger-focus restoration.
 - Made the mobile navigation keyboard-safe with accurate expanded state, inert closed content, Escape handling, and focus restoration.
 - Added accessibility contract tests and verified the existing interface with HTML validation, Pa11y/Axe, and managed Chromium at desktop and mobile widths.
+
+## Phase 9 - Documentation and OpenAPI
+
+- Expanded the README with features, architecture, setup, verification, deployment, API documentation, and mobile guidance.
+- Documented all backend environment variables and their defaults, including the legacy access-token expiry alias.
+- Added and served a validated OpenAPI 3.0 document covering authentication and match endpoints, with a regression test for the docs route.
+- Added the audit `CHANGELOG.md` and repaired root verification to parse every shipped browser and service-worker script.

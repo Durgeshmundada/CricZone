@@ -4,13 +4,13 @@
   "description": "Workspace wrapper for the CricZone app",
   "private": true,
   "engines": {
-    "node": ">=20"
+    "node": ">=18"
   },
   "scripts": {
     "start": "npm --prefix backend start",
     "dev": "npm --prefix backend run dev",
     "test": "npm --prefix backend test",
-    "check:public": "node --check public/script.js",
+    "check:public": "node scripts/check-public.js",
     "verify": "npm run check:public && npm test"
   }
 }
