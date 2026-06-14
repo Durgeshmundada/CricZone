@@ -73,6 +73,23 @@ const schemas = {
       password: z.string().min(1).max(128)
     }).strict()
   }),
+  forgotPassword: request({
+    body: z.object({
+      email: z.string().trim().toLowerCase().email().max(254)
+    }).strict()
+  }),
+  resetPassword: request({
+    params: z.object({
+      token: z.string().regex(/^[a-f0-9]{64}$/i, "Password reset token is invalid")
+    }).strict(),
+    body: z.object({
+      password: z.string().min(8).max(128),
+      confirmPassword: z.string().min(8).max(128)
+    }).strict().refine(
+      (body) => body.password === body.confirmPassword,
+      { message: "Passwords do not match", path: ["confirmPassword"] }
+    )
+  }),
   refreshSession: request({
     body: z.object({ refreshToken: z.string().min(32).max(256).optional() }).strict()
   }),

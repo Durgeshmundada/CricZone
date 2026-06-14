@@ -15,6 +15,9 @@ Copy `backend/.env.example` to `backend/.env`. Do not commit the resulting file.
 | `NODE_ENV` | No | `development` | Runtime mode: `development`, `test`, or `production`. |
 | `LOG_LEVEL` | No | `debug` in development, `info` in production | Pino logging threshold such as `debug`, `info`, `warn`, or `error`. |
 | `CLIENT_URL` | No | Local origins only | Comma-separated browser origins allowed by CORS. |
+| `APP_URL` | For recovery emails | Request origin | Public frontend URL placed in password reset links. |
+| `RESEND_API_KEY` | For recovery emails | None | Resend API key used to send password reset emails. |
+| `PASSWORD_RESET_FROM` | For recovery emails | Resend onboarding sender | Verified sender, such as `CricZone <password-reset@example.com>`. |
 | `ALLOW_ALL_ORIGINS` | No | `false` | Set to `true` only for an intentionally public development environment. |
 
 Minimum local example:
@@ -26,6 +29,9 @@ PORT=5000
 NODE_ENV=development
 LOG_LEVEL=debug
 CLIENT_URL=http://localhost:5000
+APP_URL=http://localhost:5000
+RESEND_API_KEY=re_your_api_key
+PASSWORD_RESET_FROM=CricZone <password-reset@example.com>
 ALLOW_ALL_ORIGINS=false
 ```
 
@@ -114,6 +120,9 @@ Create a GitHub repo and push this project.
 3. In Render environment variables:
    - `MONGO_URI` = your Atlas connection string
    - `CLIENT_URL` = your Render app URL (example: `https://criczone-app.onrender.com`)
+   - `APP_URL` = the same public Render app URL
+   - `RESEND_API_KEY` = your Resend API key
+   - `PASSWORD_RESET_FROM` = a sender on your verified Resend domain
 4. Deploy.
 
 After deploy, your free domain is:

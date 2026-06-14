@@ -6,6 +6,7 @@
   <meta name="description" content="CricZone helps you host local cricket matches, run live scoring, manage tournaments, and book turfs." />
   <meta name="theme-color" content="#0a0e17" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="apple-mobile-web-app-title" content="CricZone" />
 
@@ -17,7 +18,7 @@
   <link rel="manifest" href="/manifest.webmanifest" />
   <link rel="apple-touch-icon" href="/icons/icon-192.png" />
 
-  <link rel="stylesheet" href="styles.css?v=2" />
+  <link rel="stylesheet" href="styles.css?v=3" />
 </head>
 <body>
 
@@ -496,10 +497,86 @@
             <input type="password" id="loginPassword" placeholder="Enter your password" required aria-required="true" autocomplete="current-password" minlength="6" />
           </div>
 
+          <p class="auth-help">
+            <a href="#forgot-password" data-page="forgot-password">Forgot password?</a>
+          </p>
           <button type="submit" class="submit-btn">Login</button>
         </form>
         <p class="auth-switch">
           Do not have an account? <a href="#signup" data-page="signup">Sign Up</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div id="forgot-password" class="page">
+    <div class="container page-shell">
+      <div class="form-card auth-card reveal">
+        <h1 class="form-title">Forgot Password</h1>
+        <p class="auth-intro">
+          Enter your registered email address. If an account exists, we will send a
+          password reset link that expires in 15 minutes.
+        </p>
+        <form id="forgotPasswordForm">
+          <div class="form-group">
+            <label for="forgotPasswordEmail">Email</label>
+            <input
+              type="email"
+              id="forgotPasswordEmail"
+              placeholder="Enter your email"
+              required
+              aria-required="true"
+              autocomplete="email"
+              pattern="^\S+@\S+\.\S+$"
+            />
+          </div>
+          <p id="forgotPasswordStatus" class="form-status" role="status" aria-live="polite"></p>
+          <button type="submit" class="submit-btn">Send Reset Link</button>
+        </form>
+        <p class="auth-switch">
+          Remembered your password? <a href="#login" data-page="login">Back to Login</a>
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div id="reset-password" class="page">
+    <div class="container page-shell">
+      <div class="form-card auth-card reveal">
+        <h1 class="form-title">Reset Password</h1>
+        <p class="auth-intro">Choose a new password with at least 8 characters.</p>
+        <form id="resetPasswordForm">
+          <div class="form-group">
+            <label for="resetPassword">New Password</label>
+            <input
+              type="password"
+              id="resetPassword"
+              placeholder="Enter a new password"
+              required
+              aria-required="true"
+              autocomplete="new-password"
+              minlength="8"
+              maxlength="128"
+            />
+          </div>
+          <div class="form-group">
+            <label for="resetPasswordConfirm">Confirm New Password</label>
+            <input
+              type="password"
+              id="resetPasswordConfirm"
+              placeholder="Re-enter your new password"
+              required
+              aria-required="true"
+              autocomplete="new-password"
+              minlength="8"
+              maxlength="128"
+            />
+          </div>
+          <p id="resetPasswordStatus" class="form-status" role="status" aria-live="polite"></p>
+          <button type="submit" class="submit-btn">Reset Password</button>
+        </form>
+        <p class="auth-switch">
+          Need another link? <a href="#forgot-password" data-page="forgot-password">Request Reset</a>
         </p>
       </div>
     </div>
@@ -691,14 +768,6 @@
     <p>Built for local cricket communities. <span id="footerYear"></span></p>
   </footer>
 
-  <!-- Google Analytics 4 (free) integration -->
-  <script async src="https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX"></script>
-  <script>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', 'G-XXXXXXXXXX'); // TODO: Replace with your GA4 Measurement ID
-  </script>
   <script src="runtime-config.js"></script>
   <script src="js/api.js"></script>
   <script src="js/ui.js"></script>

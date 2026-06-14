@@ -80,6 +80,71 @@
         }
       }
     },
+    "/api/users/forgot-password": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Request a password reset email",
+        "operationId": "forgotPassword",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ForgotPasswordInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Generic response returned for both registered and unregistered emails",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
+    "/api/users/reset-password/{token}": {
+      "post": {
+        "tags": ["Authentication"],
+        "summary": "Set a new password using a time-limited reset token",
+        "operationId": "resetPassword",
+        "parameters": [
+          {
+            "name": "token",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^[a-fA-F0-9]{64}$"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": { "$ref": "#/components/schemas/ResetPasswordInput" }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Password reset and existing sessions revoked",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MessageResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "429": { "$ref": "#/components/responses/RateLimited" }
+        }
+      }
+    },
     "/api/users/refresh": {
       "post": {
         "tags": ["Authentication"],
@@ -476,6 +541,23 @@
         "properties": {
           "email": { "type": "string", "format": "email", "maxLength": 254 },
           "password": { "type": "string", "format": "password", "minLength": 1, "maxLength": 128 }
+        }
+      },
+      "ForgotPasswordInput": {
+        "type": "object",
+        "required": ["email"],
+        "additionalProperties": false,
+        "properties": {
+          "email": { "type": "string", "format": "email", "maxLength": 254 }
+        }
+      },
+      "ResetPasswordInput": {
+        "type": "object",
+        "required": ["password", "confirmPassword"],
+        "additionalProperties": false,
+        "properties": {
+          "password": { "type": "string", "format": "password", "minLength": 8, "maxLength": 128 },
+          "confirmPassword": { "type": "string", "format": "password", "minLength": 8, "maxLength": 128 }
         }
       },
       "RefreshTokenInput": {

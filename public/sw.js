@@ -1,8 +1,7 @@
-const STATIC_CACHE = "criczone-static-v6";
+const STATIC_CACHE = "criczone-static-v7";
 const STATIC_ASSETS = [
-  "/",
   "/index.html",
-  "/styles.css",
+  "/styles.css?v=3",
   "/js/api.js",
   "/js/ui.js",
   "/js/teams.js",
@@ -51,18 +50,21 @@ self.addEventListener("fetch", (event) => {
   if (url.pathname.startsWith("/api/")) return;
 
   event.respondWith(
-    caches.match(request).then((cachedResponse) => {
-      if (cachedResponse) return cachedResponse;
-
-      return fetch(request)
-        .then((networkResponse) => {
+    fetch(request)
+      .then((networkResponse) => {
+        if (networkResponse.ok) {
           const responseClone = networkResponse.clone();
           caches.open(STATIC_CACHE).then((cache) => {
             cache.put(request, responseClone).catch(() => {});
           });
-          return networkResponse;
-        })
-        .catch(() => caches.match("/index.html"));
-    })
+        }
+        return networkResponse;
+      })
+      .catch(async () => {
+        const cachedResponse = await caches.match(request);
+        if (cachedResponse) return cachedResponse;
+        if (request.mode === "navigate") return caches.match("/index.html");
+        return Response.error();
+      })
   );
 });

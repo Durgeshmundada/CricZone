@@ -348,6 +348,9 @@ const userSchema = new mongoose.Schema({
   failedLoginAttempts: { type: Number, default: 0, min: 0, select: false },
   lockUntil: { type: Date, default: null, select: false },
   refreshTokens: { type: [refreshTokenSchema], default: [], select: false },
+  passwordResetTokenHash: { type: String, default: null, select: false },
+  passwordResetExpiresAt: { type: Date, default: null, select: false },
+  tokenVersion: { type: Number, default: 0 },
 
   // ========== DEVICE & SESSION INFO ==========
   devices: [{

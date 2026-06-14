@@ -12,6 +12,21 @@ describe("security middleware", () => {
     expect(response.headers["x-request-id"]).toBe("audit-health-check");
     expect(response.headers["content-security-policy"]).toContain("default-src 'self'");
     expect(response.headers["content-security-policy"]).toContain("fonts.googleapis.com");
+    expect(response.headers["content-security-policy"]).toContain("script-src 'self'");
+    expect(response.headers["content-security-policy"]).not.toContain("googletagmanager.com");
+    expect(response.headers["content-security-policy"]).not.toContain("script-src 'self' 'unsafe-inline'");
+  });
+
+  test("prevents stale app-shell and service-worker responses", async () => {
+    const [indexResponse, serviceWorkerResponse] = await Promise.all([
+      request(app).get("/"),
+      request(app).get("/sw.js")
+    ]);
+
+    expect(indexResponse.status).toBe(200);
+    expect(indexResponse.headers["cache-control"]).toContain("no-cache");
+    expect(serviceWorkerResponse.status).toBe(200);
+    expect(serviceWorkerResponse.headers["cache-control"]).toContain("no-store");
   });
 
   test("rejects MongoDB operator keys before controller execution", async () => {

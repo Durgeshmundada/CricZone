@@ -17,6 +17,7 @@ const publicScriptPaths = [
 ].map((fileName) => path.join(projectRoot, "public", "js", fileName));
 const runtimeConfigPath = path.join(projectRoot, "public", "runtime-config.js");
 const publicStylesPath = path.join(projectRoot, "public", "styles.css");
+const serviceWorkerPath = path.join(projectRoot, "public", "sw.js");
 const expectedPublicScriptSources = [
   "runtime-config.js",
   "js/api.js",
@@ -131,6 +132,10 @@ describe("public app shell contracts", () => {
     expect(html).toMatch(/id="customModal"[^>]*\sinert(?:\s|>)/);
     expect(html).toContain('id="modalClose" type="button" aria-label="Close dialog"');
     expect(html).toContain('id="toastContainer" class="toast-container" aria-live="polite"');
+    expect(html).toContain('data-page="forgot-password"');
+    expect(html).toContain('id="forgotPasswordForm"');
+    expect(html).toContain('id="resetPasswordForm"');
+    expect(html).toContain('id="resetPasswordStatus" class="form-status" role="status"');
   });
 
   test("keeps keyboard focus and reduced-motion accessibility protections", () => {
@@ -145,8 +150,30 @@ describe("public app shell contracts", () => {
     expect(script).toContain("navMenu.toggleAttribute('inert', !active)");
     expect(script).toContain("removeAttribute('inert')");
     expect(script).toContain("setAttribute('inert', '')");
+    expect(script).toContain("activeElement.blur()");
+    expect(script).toContain("pageHeading.focus({ preventScroll: true })");
     expect(script).toContain("focusTarget.focus()");
     expect(styles).toContain(":focus-visible");
     expect(styles).toContain("prefers-reduced-motion: reduce");
+  });
+
+  test("ships an upgrade-safe PWA without placeholder analytics", () => {
+    const html = fs.readFileSync(publicIndexPath, "utf8");
+    const script = readPublicScripts();
+    const styles = fs.readFileSync(publicStylesPath, "utf8");
+    const serviceWorker = fs.readFileSync(serviceWorkerPath, "utf8");
+
+    expect(html).not.toContain("G-XXXXXXXXXX");
+    expect(html).not.toContain("googletagmanager.com");
+    expect(html).toContain('name="mobile-web-app-capable" content="yes"');
+    expect(styles).not.toMatch(/input:invalid/);
+    expect(script).toContain('validateStoredSession');
+    expect(script).toContain('clearStoredSession');
+    expect(script).toContain('window.addEventListener("hashchange"');
+    expect(script).toContain('hadStoredSession && !sessionIsValid ? "login" : "home"');
+    expect(script).toContain('register("/sw.js?v=7"');
+    expect(script).toContain('updateViaCache: "none"');
+    expect(serviceWorker).toContain('criczone-static-v7');
+    expect(serviceWorker.indexOf('fetch(request)')).toBeLessThan(serviceWorker.indexOf('caches.match(request)'));
   });
 });

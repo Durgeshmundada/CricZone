@@ -4,7 +4,7 @@ CricZone is a cricket community and turf-booking application. A single Express s
 
 ## Features
 
-- Register, log in, rotate refresh sessions, and manage player profiles.
+- Register, log in, recover passwords by email, rotate refresh sessions, and manage player profiles.
 - Create reusable teams and verify team invitations.
 - Schedule matches, run tosses, score ball by ball, and publish reports/highlights.
 - Create tournaments, join teams, and track standings.
@@ -71,7 +71,7 @@ The initial OpenAPI scope covers authentication and match endpoints. Expanding i
 
 ## Deployment
 
-The frontend defaults to the deployment's own origin, so production does not need a hardcoded API URL. For Render, set `MONGO_URI`, `JWT_SECRET`, `CLIENT_URL`, and `NODE_ENV=production`; the included `render.yaml` supplies the service configuration.
+The frontend defaults to the deployment's own origin, so production does not need a hardcoded API URL. For Render, set `MONGO_URI`, `JWT_SECRET`, `CLIENT_URL`, `APP_URL`, `RESEND_API_KEY`, and `PASSWORD_RESET_FROM`; the included `render.yaml` supplies the service configuration.
 
 Never commit `backend/.env`. Rotate any credential that has been committed or shared.
 

@@ -12,7 +12,16 @@ const options = {
   },
   timestamp: pino.stdTimeFunctions.isoTime,
   redact: {
-    paths: ["password", "refreshToken", "token", "authorization", "cookie"],
+    paths: [
+      "password",
+      "confirmPassword",
+      "refreshToken",
+      "resetToken",
+      "passwordResetToken",
+      "token",
+      "authorization",
+      "cookie"
+    ],
     censor: "[REDACTED]"
   }
 };

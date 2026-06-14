@@ -25,7 +25,7 @@ const createUser = async (overrides = {}) => {
 };
 
 const tokenFor = (user, expiresIn = "30m") => jwt.sign(
-  { id: user._id.toString() },
+  { id: user._id.toString(), tokenVersion: Number(user.tokenVersion) || 0 },
   process.env.JWT_SECRET,
   { expiresIn }
 );

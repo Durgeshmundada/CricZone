@@ -129,7 +129,13 @@ function formatWicketDismissalText(dismissal) {
 }
 
 function isLoggedIn() {
-  return !!localStorage.getItem("token");
+  const token = localStorage.getItem("token");
+  const expiry = token ? readJwtExpiry(token) : null;
+  if (expiry && expiry * 1000 <= Date.now()) {
+    clearStoredSession("Your session expired. Please log in again.");
+    return false;
+  }
+  return Boolean(token);
 }
 
 function getCurrentUserRole() {
@@ -306,20 +312,35 @@ function showPage(pageId) {
   window.scrollTo(0, 0);
   
   const pages = document.querySelectorAll(".page");
+  const targetPage = document.getElementById(pageId);
+  const activeElement = document.activeElement;
+  const activePage = activeElement instanceof Element ? activeElement.closest(".page") : null;
+
+  if (activePage && activePage !== targetPage && activeElement instanceof HTMLElement) {
+    activeElement.blur();
+  }
+
   pages.forEach((page) => {
     page.style.display = 'none';
     page.setAttribute('aria-hidden', 'true');
+    page.setAttribute('inert', '');
   });
   
-  const targetPage = document.getElementById(pageId);
   if (targetPage) {
     targetPage.style.display = 'block';
     targetPage.setAttribute('aria-hidden', 'false');
+    targetPage.removeAttribute('inert');
     targetPage.classList.remove("page-enter");
     // Trigger reflow so animation restarts whenever a page is shown.
     void targetPage.offsetWidth;
     targetPage.classList.add("page-enter");
     animatePageReveal(targetPage);
+
+    const pageHeading = targetPage.querySelector("h1");
+    if (pageHeading instanceof HTMLElement) {
+      pageHeading.setAttribute("tabindex", "-1");
+      pageHeading.focus({ preventScroll: true });
+    }
   }
   
   const navLinks = document.querySelectorAll(".nav-link");

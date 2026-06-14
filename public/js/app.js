@@ -20,6 +20,22 @@ document.addEventListener("DOMContentLoaded", async () => {
   }
 
   setupMobileNavigation();
+  const readAuthHashRoute = () => {
+    const [page, query = ""] = window.location.hash.slice(1).split("?");
+    return {
+      page,
+      token: page === "reset-password"
+        ? new URLSearchParams(query).get("token") || ""
+        : ""
+    };
+  };
+  const initialAuthRoute = readAuthHashRoute();
+  const requestedPage = initialAuthRoute.page;
+  const publicAuthPages = new Set(["login", "signup", "forgot-password", "reset-password"]);
+  const requestedAuthPage = publicAuthPages.has(requestedPage) ? requestedPage : "";
+  let resetToken = initialAuthRoute.token;
+  const hadStoredSession = Boolean(localStorage.getItem('token'));
+  const sessionIsValid = await validateStoredSession();
   setUserFromStorage();
 
   const navApiConfigBtn = document.getElementById("navApiConfig");
@@ -34,9 +50,12 @@ document.addEventListener("DOMContentLoaded", async () => {
     }
   }
 
-  showPage("home");
+  const initialPage = requestedAuthPage === "reset-password" && !resetToken
+    ? "forgot-password"
+    : requestedAuthPage || (hadStoredSession && !sessionIsValid ? "login" : "home");
+  showPage(initialPage);
 
-  if (isNativePlatform() && !isLoggedIn()) {
+  if (isNativePlatform() && !isLoggedIn() && !requestedAuthPage) {
     showToast("Please login to continue.", "info");
     setTimeout(() => showPage("login"), 250);
   }
@@ -59,7 +78,12 @@ document.addEventListener("DOMContentLoaded", async () => {
       el.addEventListener("click", (e) => {
         e.preventDefault();
         const page = el.getAttribute("data-page");
-        if (page) showPage(page);
+        if (page) {
+          if (window.location.hash.startsWith("#reset-password")) {
+            window.history.replaceState(null, "", `${window.location.pathname}${window.location.search}#${page}`);
+          }
+          showPage(page);
+        }
       });
     }
   });
@@ -230,6 +254,7 @@ document.addEventListener("DOMContentLoaded", async () => {
             phone: data.user.phone,
             role: data.user.role
           }));
+          markStoredSessionActive();
 
           showToast('Login successful.', 'success');
           setUserFromStorage();
@@ -254,6 +279,168 @@ document.addEventListener("DOMContentLoaded", async () => {
       }
     });
   }
+
+  // FORGOT PASSWORD FORM
+  const forgotPasswordForm = document.getElementById("forgotPasswordForm");
+  forgotPasswordForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const emailInput = document.getElementById("forgotPasswordEmail");
+    const status = document.getElementById("forgotPasswordStatus");
+    const submitBtn = forgotPasswordForm.querySelector(".submit-btn");
+    const email = emailInput.value.trim();
+
+    emailInput.classList.remove("invalid");
+    status.className = "form-status";
+    status.textContent = "";
+
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
+      emailInput.classList.add("invalid");
+      status.classList.add("error");
+      status.textContent = "Enter a valid email address.";
+      return;
+    }
+
+    try {
+      submitBtn.disabled = true;
+      submitBtn.textContent = "Sending...";
+      const response = await fetch(`${API_BASE}/users/forgot-password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json"
+        },
+        body: JSON.stringify({ email })
+      });
+      const payload = await readResponsePayload(response);
+
+      if (!response.ok) {
+        throw new Error(getReadableResponseError(response, payload, "Unable to request a reset link"));
+      }
+
+      status.classList.add("success");
+      status.textContent = payload.json?.message ||
+        "If an account exists for that email, a password reset link has been sent.";
+      forgotPasswordForm.reset();
+    } catch (error) {
+      status.classList.add("error");
+      status.textContent = error.message || "Unable to request a reset link. Please try again.";
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = "Send Reset Link";
+    }
+  });
+
+  // RESET PASSWORD FORM
+  const resetPasswordForm = document.getElementById("resetPasswordForm");
+  const resetPasswordStatus = document.getElementById("resetPasswordStatus");
+  const resetSubmitBtn = resetPasswordForm?.querySelector(".submit-btn");
+  let hasValidResetToken = /^[a-f0-9]{64}$/i.test(resetToken);
+
+  const updateResetTokenState = () => {
+    hasValidResetToken = /^[a-f0-9]{64}$/i.test(resetToken);
+    resetPasswordStatus.className = "form-status";
+    resetPasswordStatus.textContent = "";
+    resetSubmitBtn.disabled = !hasValidResetToken;
+
+    if (resetToken && !hasValidResetToken) {
+      resetPasswordStatus.classList.add("error");
+      resetPasswordStatus.textContent = "This password reset link is invalid. Request a new link.";
+    }
+  };
+
+  if (resetPasswordForm && requestedPage === "reset-password" && !hasValidResetToken) {
+    resetPasswordStatus.classList.add("error");
+    resetPasswordStatus.textContent = "This password reset link is invalid. Request a new link.";
+    resetSubmitBtn.disabled = true;
+  }
+
+  window.addEventListener("hashchange", () => {
+    const route = readAuthHashRoute();
+    if (!publicAuthPages.has(route.page)) return;
+
+    if (route.page === "reset-password") {
+      resetToken = route.token;
+      updateResetTokenState();
+      showPage(resetToken ? "reset-password" : "forgot-password");
+      return;
+    }
+
+    showPage(route.page);
+  });
+
+  resetPasswordForm?.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    const passwordInput = document.getElementById("resetPassword");
+    const confirmInput = document.getElementById("resetPasswordConfirm");
+    const password = passwordInput.value;
+    const confirmPassword = confirmInput.value;
+
+    passwordInput.classList.remove("invalid");
+    confirmInput.classList.remove("invalid");
+    resetPasswordStatus.className = "form-status";
+    resetPasswordStatus.textContent = "";
+
+    if (!hasValidResetToken) {
+      resetPasswordStatus.classList.add("error");
+      resetPasswordStatus.textContent = "This password reset link is invalid. Request a new link.";
+      return;
+    }
+
+    if (password.length < 8 || password.length > 128) {
+      passwordInput.classList.add("invalid");
+      resetPasswordStatus.classList.add("error");
+      resetPasswordStatus.textContent = "Password must be between 8 and 128 characters.";
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      confirmInput.classList.add("invalid");
+      resetPasswordStatus.classList.add("error");
+      resetPasswordStatus.textContent = "Passwords do not match.";
+      return;
+    }
+
+    try {
+      resetSubmitBtn.disabled = true;
+      resetSubmitBtn.textContent = "Resetting...";
+      const response = await fetch(
+        `${API_BASE}/users/reset-password/${encodeURIComponent(resetToken)}`,
+        {
+          method: "POST",
+          credentials: "include",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json"
+          },
+          body: JSON.stringify({ password, confirmPassword })
+        }
+      );
+      const payload = await readResponsePayload(response);
+
+      if (!response.ok) {
+        throw new Error(getReadableResponseError(response, payload, "Unable to reset password"));
+      }
+
+      localStorage.removeItem("token");
+      localStorage.removeItem("user");
+      setUserFromStorage();
+      resetPasswordForm.reset();
+      resetPasswordStatus.classList.add("success");
+      resetPasswordStatus.textContent = payload.json?.message || "Password reset successfully.";
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${window.location.search}#login`
+      );
+      setTimeout(() => showPage("login"), 1200);
+    } catch (error) {
+      resetPasswordStatus.classList.add("error");
+      resetPasswordStatus.textContent = error.message || "Unable to reset password. Please try again.";
+    } finally {
+      resetSubmitBtn.disabled = false;
+      resetSubmitBtn.textContent = "Reset Password";
+    }
+  });
 
   // SIGNUP FORM
   const signupForm = document.getElementById('signupForm');
@@ -322,6 +509,7 @@ document.addEventListener("DOMContentLoaded", async () => {
         if (data && data.token) {
           localStorage.setItem('token', data.token);
           localStorage.setItem('user', JSON.stringify(data.user || { email, name }));
+          markStoredSessionActive();
           showToast('Signup successful.', 'success');
           setUserFromStorage();
           setTimeout(() => showPage('home'), 1500);

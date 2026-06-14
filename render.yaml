@@ -17,3 +17,9 @@ services:
         generateValue: true
       - key: CLIENT_URL
         sync: false
+      - key: APP_URL
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: PASSWORD_RESET_FROM
+        sync: false

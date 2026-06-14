@@ -38,6 +38,13 @@ const protect = async (req, res, next) => {
       });
     }
 
+    if ((Number(decoded.tokenVersion) || 0) !== (Number(req.user.tokenVersion) || 0)) {
+      return res.status(401).json({
+        success: false,
+        message: "Session is no longer valid, please login again"
+      });
+    }
+
     return next();
   } catch (error) {
     getRequestLogger(req).warn({ err: error }, "JWT authentication failed");
@@ -113,7 +120,13 @@ const optionalAuth = async (req, _res, next) => {
     }
 
     const decoded = jwt.verify(token, jwtSecret);
-    req.user = await User.findById(decoded.id).select("-password");
+    const user = await User.findById(decoded.id).select("-password");
+    if (
+      user &&
+      (Number(decoded.tokenVersion) || 0) === (Number(user.tokenVersion) || 0)
+    ) {
+      req.user = user;
+    }
     return next();
   } catch (_error) {
     return next();

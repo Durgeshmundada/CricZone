@@ -83,6 +83,104 @@ const getCurrentApiBase = () =>
   normalizeApiBase(DEFAULT_API_BASE);
 
 const API_BASE = getCurrentApiBase();
+const nativeFetch = window.fetch.bind(window);
+let sessionInvalidationHandled = false;
+
+const markStoredSessionActive = () => {
+  sessionInvalidationHandled = false;
+  hideErrorBanner();
+};
+
+const readJwtExpiry = (token) => {
+  try {
+    const payload = String(token || '').split('.')[1];
+    if (!payload) return null;
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, '=');
+    const decoded = JSON.parse(atob(padded));
+    return Number(decoded.exp) || null;
+  } catch (_error) {
+    return null;
+  }
+};
+
+const clearStoredSession = (message = "Your session is no longer valid. Please log in again.") => {
+  try {
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+  } catch (_error) {
+    // Storage can be unavailable in privacy-restricted contexts.
+  }
+
+  if (sessionInvalidationHandled) return;
+  sessionInvalidationHandled = true;
+  if (typeof setUserFromStorage === 'function') setUserFromStorage();
+  showErrorBanner(message);
+  if (typeof showPage === 'function') showPage('login');
+};
+
+const refreshStoredSession = async () => {
+  try {
+    const response = await nativeFetch(`${API_BASE}/users/refresh`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    });
+    if (!response.ok) return false;
+
+    const data = await response.json().catch(() => null);
+    if (!data?.token) return false;
+    localStorage.setItem('token', data.token);
+    markStoredSessionActive();
+    return true;
+  } catch (_error) {
+    return false;
+  }
+};
+
+const validateStoredSession = async () => {
+  const token = localStorage.getItem('token');
+  if (!token) return false;
+
+  const expiry = readJwtExpiry(token);
+  if (expiry && expiry * 1000 <= Date.now()) {
+    if (await refreshStoredSession()) return true;
+    clearStoredSession('Your session expired. Please log in again.');
+    return false;
+  }
+
+  try {
+    const response = await nativeFetch(`${API_BASE}/users/profile`, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    if (response.ok) return true;
+    if (response.status === 401 && await refreshStoredSession()) return true;
+    if (response.status === 401) clearStoredSession();
+    return false;
+  } catch (_error) {
+    // Keep the local session during temporary network outages.
+    return true;
+  }
+};
+
+const requestHasBearerToken = (input, options = {}) => {
+  try {
+    const requestHeaders = input instanceof Request ? input.headers : undefined;
+    const headers = new Headers(options.headers || requestHeaders);
+    return /^Bearer\s+\S+/i.test(headers.get('Authorization') || '');
+  } catch (_error) {
+    return false;
+  }
+};
+
+window.fetch = async (input, options = {}) => {
+  const response = await nativeFetch(input, options);
+  if (response.status === 401 && requestHasBearerToken(input, options)) {
+    clearStoredSession();
+  }
+  return response;
+};
 
 const saveApiBase = (apiBase) => {
   const normalized = normalizeApiInput(apiBase);
@@ -140,14 +238,6 @@ const readResponsePayload = async (response) => {
 
   try {
     const json = JSON.parse(text);
-    // Token expiry handling
-    if (json && (json.error === "Token expired" || json.message === "Token expired")) {
-      showErrorBanner("Session expired. Please log in again.");
-      setTimeout(() => {
-        hideErrorBanner();
-        showPage && showPage("login");
-      }, 2000);
-    }
     return { text, json };
   } catch (_error) {
     return { text, json: null };
@@ -198,7 +288,10 @@ function registerServiceWorker() {
 
   window.addEventListener("load", async () => {
     try {
-      await navigator.serviceWorker.register("/sw.js");
+      const registration = await navigator.serviceWorker.register("/sw.js?v=7", {
+        updateViaCache: "none"
+      });
+      await registration.update();
     } catch (error) {
       console.error("Service worker registration failed:", error);
     }

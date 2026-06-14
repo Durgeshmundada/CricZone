@@ -6,6 +6,8 @@ const {
   loginUser,
   refreshSession,
   logoutUser,
+  forgotPassword,
+  resetPassword,
   getUserProfile,
   updateUserProfile,
   getPlayerById,
@@ -30,6 +32,16 @@ const authLimiter = rateLimit({
   legacyHeaders: false,
   message: { success: false, message: "Too many authentication attempts, please try again in 15 minutes" }
 });
+const passwordRecoveryLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    success: false,
+    message: "Too many password recovery attempts, please try again in 15 minutes"
+  }
+});
 
 // ========== AUTHENTICATION ROUTES ==========
 router.post("/register", authLimiter, validate(schemas.registerUser), registerUser);
@@ -37,6 +49,18 @@ router.post("/signup", authLimiter, validate(schemas.registerUser), registerUser
 router.post("/login", authLimiter, validate(schemas.loginUser), loginUser);
 router.post("/refresh", validate(schemas.refreshSession), refreshSession);
 router.post("/logout", validate(schemas.logoutSession), logoutUser);
+router.post(
+  "/forgot-password",
+  passwordRecoveryLimiter,
+  validate(schemas.forgotPassword),
+  forgotPassword
+);
+router.post(
+  "/reset-password/:token",
+  passwordRecoveryLimiter,
+  validate(schemas.resetPassword),
+  resetPassword
+);
 
 // ========== PLAYER DISCOVERY & SEARCH (Feature #9: Looking) ==========
 // Public routes - anyone can search for players

@@ -1,4 +1,5 @@
 // backend/controllers/userController.js
+const crypto = require("crypto");
 const User = require("../models/User");
 const escapeRegex = require("../utils/escapeRegex");
 const {
@@ -7,10 +8,16 @@ const {
   hashRefreshToken,
   issueSession
 } = require("../services/authTokenService");
+const { sendPasswordResetEmail } = require("../services/emailService");
 const { getRequestLogger } = require("../utils/logger");
 const isProduction = process.env.NODE_ENV === "production";
 const MAX_FAILED_LOGINS = 5;
 const LOCK_DURATION_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_LIFETIME_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_RESPONSE = {
+  success: true,
+  message: "If an account exists for that email, a password reset link has been sent."
+};
 
 const sendServerError = (res, message, error) => {
   getRequestLogger(res).error({ err: error }, message);
@@ -196,6 +203,104 @@ const logoutUser = async (req, res) => {
     return res.json({ success: true, message: "Logged out successfully" });
   } catch (error) {
     return sendServerError(res, "Error logging out", error);
+  }
+};
+
+const getApplicationUrl = (req) => {
+  const configuredUrl = String(process.env.APP_URL || process.env.CLIENT_URL || "")
+    .split(",")
+    .map((value) => value.trim())
+    .find(Boolean);
+
+  return (configuredUrl || `${req.protocol}://${req.get("host")}`).replace(/\/+$/, "");
+};
+
+const forgotPassword = async (req, res) => {
+  const requestLogger = getRequestLogger(req);
+
+  try {
+    const email = req.body.email.toLowerCase().trim();
+    const user = await User.findOne({ email, isActive: true })
+      .select("+passwordResetTokenHash +passwordResetExpiresAt");
+
+    if (!user) {
+      return res.status(200).json(PASSWORD_RESET_RESPONSE);
+    }
+
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    user.passwordResetTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    user.passwordResetExpiresAt = new Date(Date.now() + PASSWORD_RESET_LIFETIME_MS);
+    await user.save({ validateBeforeSave: false });
+
+    const resetUrl = `${getApplicationUrl(req)}/#reset-password?token=${rawToken}`;
+
+    try {
+      await sendPasswordResetEmail({
+        to: user.email,
+        name: user.name,
+        resetUrl,
+        expiresMinutes: PASSWORD_RESET_LIFETIME_MS / 60000
+      });
+    } catch (error) {
+      user.passwordResetTokenHash = null;
+      user.passwordResetExpiresAt = null;
+      await user.save({ validateBeforeSave: false });
+      requestLogger.error({ err: error, userId: user._id }, "Password reset email delivery failed");
+    }
+
+    return res.status(200).json(PASSWORD_RESET_RESPONSE);
+  } catch (error) {
+    requestLogger.error({ err: error }, "Password reset request failed");
+    return res.status(200).json(PASSWORD_RESET_RESPONSE);
+  }
+};
+
+const resetPassword = async (req, res) => {
+  try {
+    const tokenHash = crypto.createHash("sha256").update(req.params.token).digest("hex");
+    const user = await User.findOneAndUpdate(
+      {
+        passwordResetTokenHash: tokenHash,
+        passwordResetExpiresAt: { $gt: new Date() },
+        isActive: true
+      },
+      {
+        $unset: {
+          passwordResetTokenHash: 1,
+          passwordResetExpiresAt: 1
+        }
+      },
+      { new: true }
+    ).select("+password +refreshTokens +failedLoginAttempts +lockUntil");
+
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "Password reset link is invalid or has expired"
+      });
+    }
+
+    if (await user.matchPassword(req.body.password)) {
+      return res.status(400).json({
+        success: false,
+        message: "New password must be different from your current password"
+      });
+    }
+
+    user.password = req.body.password;
+    user.refreshTokens = [];
+    user.failedLoginAttempts = 0;
+    user.lockUntil = null;
+    user.tokenVersion = (Number(user.tokenVersion) || 0) + 1;
+    await user.save({ validateModifiedOnly: true });
+
+    clearRefreshCookie(res);
+    return res.status(200).json({
+      success: true,
+      message: "Password reset successfully. Please log in with your new password."
+    });
+  } catch (error) {
+    return sendServerError(res, "Error resetting password", error);
   }
 };
 
@@ -602,6 +707,8 @@ module.exports = {
   loginUser,
   refreshSession,
   logoutUser,
+  forgotPassword,
+  resetPassword,
   getUserProfile,
   updateUserProfile,
   getPlayerById,

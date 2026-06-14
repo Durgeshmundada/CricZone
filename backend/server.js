@@ -115,7 +115,7 @@ app.use(helmet({
       "frame-ancestors": ["'self'"],
       "img-src": ["'self'", "data:", "blob:", "https:"],
       "object-src": ["'none'"],
-      "script-src": ["'self'", "'unsafe-inline'", "https://www.googletagmanager.com"],
+      "script-src": ["'self'"],
       "script-src-attr": ["'none'"],
       "style-src": ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
       "upgrade-insecure-requests": isProduction ? [] : null
@@ -259,7 +259,14 @@ const publicDir = path.join(__dirname, "../public");
 const indexPath = path.join(publicDir, "index.html");
 
 if (fs.existsSync(publicDir)) {
-  app.use(express.static(publicDir, { maxAge: isProduction ? "1h" : 0 }));
+  app.use(express.static(publicDir, {
+    maxAge: 0,
+    setHeaders: (res, filePath) => {
+      if (filePath.endsWith("sw.js") || filePath.endsWith("index.html")) {
+        res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+      }
+    }
+  }));
 }
 
 app.get("/", (_req, res) => {

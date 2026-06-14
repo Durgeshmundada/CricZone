@@ -1,3 +1,4 @@
+const crypto = require("crypto");
 const User = require("../models/User");
 const { api, auth, createAuthUser, createUser, nextValue } = require("./helpers/apiTestUtils");
 
@@ -58,6 +59,96 @@ describe("User API", () => {
     const lockedUser = await User.findById(user._id).select("+failedLoginAttempts +lockUntil");
     expect(lockedUser.failedLoginAttempts).toBe(5);
     expect(lockedUser.lockUntil.getTime()).toBeGreaterThan(Date.now());
+  });
+
+  test("creates a time-limited hashed reset token without revealing whether an email exists", async () => {
+    const user = await createUser({ email: `${nextValue("forgot")}@example.test` });
+    const knownResponse = await api
+      .post("/api/users/forgot-password")
+      .set("X-Forwarded-For", "203.0.113.31")
+      .send({ email: user.email });
+    const unknownResponse = await api
+      .post("/api/users/forgot-password")
+      .set("X-Forwarded-For", "203.0.113.32")
+      .send({ email: `${nextValue("unknown")}@example.test` });
+
+    expect(knownResponse.status).toBe(200);
+    expect(unknownResponse.status).toBe(200);
+    expect(unknownResponse.body).toEqual(knownResponse.body);
+
+    const storedUser = await User.findById(user._id)
+      .select("+passwordResetTokenHash +passwordResetExpiresAt");
+    expect(storedUser.passwordResetTokenHash).toMatch(/^[a-f0-9]{64}$/);
+    expect(storedUser.passwordResetExpiresAt.getTime()).toBeGreaterThan(Date.now() + 14 * 60 * 1000);
+    expect(storedUser.passwordResetExpiresAt.getTime()).toBeLessThanOrEqual(Date.now() + 15 * 60 * 1000);
+  });
+
+  test("resets a password once, clears sessions, and invalidates existing access tokens", async () => {
+    const originalPassword = "Pass1234";
+    const newPassword = "MuchSaferPass456";
+    const { user, token: oldAccessToken } = await createAuthUser({ password: originalPassword });
+    const rawToken = crypto.randomBytes(32).toString("hex");
+
+    user.passwordResetTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    user.passwordResetExpiresAt = new Date(Date.now() + 15 * 60 * 1000);
+    user.refreshTokens = [{
+      tokenHash: crypto.createHash("sha256").update("existing-refresh-token").digest("hex"),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000),
+      createdAt: new Date(),
+      userAgent: "test"
+    }];
+    await user.save({ validateBeforeSave: false });
+
+    const reset = await api
+      .post(`/api/users/reset-password/${rawToken}`)
+      .set("X-Forwarded-For", "203.0.113.33")
+      .send({ password: newPassword, confirmPassword: newPassword });
+    expect(reset.status).toBe(200);
+
+    const updatedUser = await User.findById(user._id)
+      .select("+password +passwordResetTokenHash +passwordResetExpiresAt +refreshTokens");
+    expect(await updatedUser.matchPassword(newPassword)).toBe(true);
+    expect(await updatedUser.matchPassword(originalPassword)).toBe(false);
+    expect(updatedUser.passwordResetTokenHash).toBeFalsy();
+    expect(updatedUser.passwordResetExpiresAt).toBeFalsy();
+    expect(updatedUser.refreshTokens).toHaveLength(0);
+    expect(updatedUser.tokenVersion).toBe(1);
+
+    const reused = await api
+      .post(`/api/users/reset-password/${rawToken}`)
+      .set("X-Forwarded-For", "203.0.113.34")
+      .send({ password: "AnotherSafePass789", confirmPassword: "AnotherSafePass789" });
+    expect(reused.status).toBe(400);
+
+    const oldSession = await auth(api.get("/api/users/profile"), oldAccessToken);
+    expect(oldSession.status).toBe(401);
+
+    const login = await api
+      .post("/api/users/login")
+      .set("X-Forwarded-For", "203.0.113.35")
+      .send({ email: user.email, password: newPassword });
+    expect(login.status).toBe(200);
+  });
+
+  test("rejects expired reset tokens and mismatched passwords", async () => {
+    const user = await createUser();
+    const rawToken = crypto.randomBytes(32).toString("hex");
+    user.passwordResetTokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
+    user.passwordResetExpiresAt = new Date(Date.now() - 1000);
+    await user.save({ validateBeforeSave: false });
+
+    const expired = await api
+      .post(`/api/users/reset-password/${rawToken}`)
+      .set("X-Forwarded-For", "203.0.113.36")
+      .send({ password: "NewPassword123", confirmPassword: "NewPassword123" });
+    expect(expired.status).toBe(400);
+
+    const mismatched = await api
+      .post(`/api/users/reset-password/${crypto.randomBytes(32).toString("hex")}`)
+      .set("X-Forwarded-For", "203.0.113.37")
+      .send({ password: "NewPassword123", confirmPassword: "DifferentPassword123" });
+    expect(mismatched.status).toBe(400);
+    expect(mismatched.body.message).toBe("Request validation failed");
   });
 
   test("updates profiles, discovers players, follows users, and enforces admin role changes", async () => {

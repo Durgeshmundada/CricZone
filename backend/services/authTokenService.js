@@ -11,14 +11,18 @@ const getRefreshLifetimeMs = () => {
 
 const hashRefreshToken = (token) => crypto.createHash("sha256").update(token).digest("hex");
 
-const generateAccessToken = (userId) => {
+const generateAccessToken = (userId, tokenVersion = 0) => {
   if (!process.env.JWT_SECRET) {
     throw new Error("JWT_SECRET is not configured");
   }
 
-  return jwt.sign({ id: userId }, process.env.JWT_SECRET, {
+  return jwt.sign(
+    { id: userId, tokenVersion: Number(tokenVersion) || 0 },
+    process.env.JWT_SECRET,
+    {
     expiresIn: process.env.JWT_ACCESS_EXPIRE || process.env.JWT_EXPIRE || "30m"
-  });
+    }
+  );
 };
 
 const getRefreshTokenFromRequest = (req) => {
@@ -68,7 +72,7 @@ const issueSession = async (user, req, res) => {
   setRefreshCookie(res, refreshToken);
 
   return {
-    token: generateAccessToken(user._id),
+    token: generateAccessToken(user._id, user.tokenVersion),
     expiresIn: process.env.JWT_ACCESS_EXPIRE || process.env.JWT_EXPIRE || "30m"
   };
 };
