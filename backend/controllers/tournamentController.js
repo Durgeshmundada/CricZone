@@ -798,6 +798,13 @@ exports.updateStandings = async (req, res) => {
       });
     }
 
+    if (String(tournament.createdBy) !== String(req.user._id)) {
+      return res.status(403).json({
+        success: false,
+        message: "Not authorized to update tournament standings"
+      });
+    }
+
     let teamAStanding = tournament.standings.find(s => s.teamName === teamA);
     let teamBStanding = tournament.standings.find(s => s.teamName === teamB);
 

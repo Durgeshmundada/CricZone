@@ -16,7 +16,7 @@ owner before repository cleanup began.
 | 7 | Major | Security middleware was incomplete: implicit CSP and no MongoDB operator rejection. | `backend/server.js` | Fixed - explicit Helmet CSP/HSTS, 100/min global limiter, compression, and recursive key rejection in Phase 2. |
 | 8 | Major | Access tokens are long-lived and cannot be rotated or revoked. | `backend/controllers/userController.js` | Fixed - 30-minute access tokens plus hashed rotating refresh sessions, refresh, and logout endpoints in Phase 2. |
 | 9 | Major | User-generated frontend content is frequently rendered with `innerHTML`. | Frontend rendering modules | Fixed - Phase 4 added context escaping, identifier/CSS guards, URL allowlisting, and handler regression tests. |
-| 10 | Major | Automated coverage is narrow and currently depends on an external Atlas database. | `backend/tests` | Open - Phase 5 |
+| 10 | Major | Automated coverage is narrow and currently depends on an external Atlas database. | `backend/tests` | Fixed - Phase 5 uses an isolated memory database, 12 suites, and enforced 70% controller/service coverage thresholds. |
 | 11 | Major | CI and container-based local setup are missing. | Repository root | Open - Phase 6 |
 | 12 | Minor | Generated APK binary was committed. | `mobile/CricZone-debug.apk` | Fixed - Phase 1 |
 | 13 | Minor | Empty, unused model file was committed. | `backend/models/matchModel.js` | Fixed - Phase 1 |
@@ -55,6 +55,14 @@ owner before repository cleanup began.
 - Added public contract checks for module order, independent syntax parsing, inline handler absence, and rendering guards.
 - Browser smoke verification passed for shell rendering and navigation. Expected API error states appeared because the verification server intentionally hosted static assets without the backend.
 - The post-change full suite passed 15/16 tests; the remaining match API test is the documented Atlas DNS dependency addressed in Phase 5.
+
+## Phase 5 Notes
+
+- Added `mongodb-memory-server` 10.4.3, the newest release compatible with the project's Node 18 runtime, and centralized Jest database setup/cleanup.
+- Added Supertest suites for users, teams, tournaments, bookings, turfs, posts, and leaderboards; expanded match API coverage for listing, reports, authorization, and deletion.
+- Tests exposed and fixed a missing tournament-standings ownership check and a Zod/Mongoose `minPlayers` mismatch.
+- The full coverage run passes 26/26 tests across 12 suites: 74.59% lines overall, 72.21% controller lines, and 80.13% service lines.
+- Jest now enforces at least 70% statements/lines globally and for controllers/services, plus 70% functions for controllers/services.
 
 ## Decisions Needed
 

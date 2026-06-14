@@ -34,3 +34,10 @@
 - Removed inline event handlers, blocked script attributes through CSP, and registered actions through event listeners.
 - Updated service-worker caching and public contract tests for the modular asset graph.
 - Verified the static shell and navigation in managed Chrome.
+
+## Phase 5 - Isolated API Testing and Coverage
+
+- Replaced Atlas-dependent tests with a shared `mongodb-memory-server` Jest harness.
+- Added API suites for users, teams, tournaments, bookings, turfs, posts, and leaderboards and broadened the match lifecycle suite.
+- Added an enforced coverage command and 70% controller/service thresholds; the final run reached 74.59% lines overall.
+- Restricted tournament standings updates to the tournament owner and aligned tournament player-count validation with the database model.

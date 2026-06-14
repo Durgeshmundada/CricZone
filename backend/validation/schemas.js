@@ -186,7 +186,7 @@ const schemas = {
       customOvers: z.coerce.number().int().min(1).max(50).optional(),
       tournamentType: z.enum(["league", "knockout", "league_knockout", "group_stage"]).optional(),
       maxTeams: z.coerce.number().int().min(2).max(128).optional(),
-      minPlayers: z.coerce.number().int().min(1).max(30).optional(),
+      minPlayers: z.coerce.number().int().min(2).max(30).optional(),
       maxPlayers: z.coerce.number().int().min(1).max(50).optional(),
       prizePool: z.union([z.string().max(200), z.record(z.string(), z.unknown())]).optional(),
       pointsSystem: z.record(z.string(), z.unknown()).optional(),
