@@ -1,4 +1,4 @@
-const STATIC_CACHE = "criczone-static-v7";
+const STATIC_CACHE = "criczone-static-v8";
 const STATIC_ASSETS = [
   "/index.html",
   "/styles.css?v=3",
@@ -37,7 +37,18 @@ self.addEventListener("activate", (event) => {
             .map((key) => caches.delete(key))
         )
       )
-      .then(() => self.clients.claim())
+      .then(async () => {
+        await self.clients.claim();
+        const windowClients = await self.clients.matchAll({
+          type: "window",
+          includeUncontrolled: true
+        });
+        await Promise.all(
+          windowClients.map((client) =>
+            client.navigate(client.url).catch(() => undefined)
+          )
+        );
+      })
   );
 });
 

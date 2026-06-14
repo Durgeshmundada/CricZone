@@ -171,9 +171,11 @@ describe("public app shell contracts", () => {
     expect(script).toContain('clearStoredSession');
     expect(script).toContain('window.addEventListener("hashchange"');
     expect(script).toContain('hadStoredSession && !sessionIsValid ? "login" : "home"');
-    expect(script).toContain('register("/sw.js?v=7"');
+    expect(script).toContain('register("/sw.js?v=8"');
     expect(script).toContain('updateViaCache: "none"');
-    expect(serviceWorker).toContain('criczone-static-v7');
+    expect(serviceWorker).toContain('criczone-static-v8');
+    expect(serviceWorker).toContain('includeUncontrolled: true');
+    expect(serviceWorker).toContain('client.navigate(client.url)');
     expect(serviceWorker.indexOf('fetch(request)')).toBeLessThan(serviceWorker.indexOf('caches.match(request)'));
   });
 });
