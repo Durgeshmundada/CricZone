@@ -136,6 +136,9 @@ describe("public app shell contracts", () => {
     expect(html).toContain('id="forgotPasswordForm"');
     expect(html).toContain('id="resetPasswordForm"');
     expect(html).toContain('id="resetPasswordStatus" class="form-status" role="status"');
+    const styles = fs.readFileSync(publicStylesPath, "utf8");
+    expect(styles).toContain("position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 0;");
+    expect(styles).toContain("position: relative; z-index: 1; box-shadow: var(--shadow-lg);");
   });
 
   test("keeps keyboard focus and reduced-motion accessibility protections", () => {
