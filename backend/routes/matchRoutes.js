@@ -7,6 +7,7 @@ const {
   getMatch,
   setMatchToss,
   updateMatchScore,
+  completeInnings,
   completeMatch,
   getUserMatches,
   deleteMatch,
@@ -33,6 +34,7 @@ router.get("/:id/report", getMatchReport);
 router.get("/:id", getMatch);
 router.put("/:id/toss", protect, validate(schemas.setMatchToss), setMatchToss);
 router.put("/:id/score", protect, validate(schemas.updateMatchScore), updateMatchScore);
+router.put("/:id/innings/complete", protect, validate(schemas.matchIdParam), completeInnings);
 router.put("/:id/complete", protect, validate(schemas.matchIdParam), completeMatch);
 router.delete("/:id", protect, validate(schemas.matchIdParam), deleteMatch);
 

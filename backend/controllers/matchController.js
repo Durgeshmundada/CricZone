@@ -4,7 +4,7 @@ const Match = require('../models/Match');
 const Team = require('../models/Team');
 const User = require('../models/User');
 const { configureMatchFromToss } = require('../services/matchSetupService');
-const { processScoreUpdate, completeMatchLogic } = require('../services/scoringService');
+const { processScoreUpdate, completeCurrentInnings, completeMatchLogic } = require('../services/scoringService');
 const { getPagination, getPaginationMeta } = require('../utils/pagination');
 const { getRequestLogger } = require('../utils/logger');
 const isProduction = process.env.NODE_ENV === 'production';
@@ -466,6 +466,21 @@ exports.updateMatchScore = async (req, res) => {
     return res.json({ success: true, ...result });
   } catch (error) {
     return sendControllerError(res, 'Failed to update score', error);
+  }
+};
+
+// @desc Complete the current innings and advance or finish the match
+// @route PUT /api/matches/:id/innings/complete
+// @access Protected
+exports.completeInnings = async (req, res) => {
+  try {
+    const result = await completeCurrentInnings({
+      matchId: req.params.id,
+      user: req.user
+    });
+    return res.json({ success: true, ...result });
+  } catch (error) {
+    return sendControllerError(res, 'Failed to end innings', error);
   }
 };
 

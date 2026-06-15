@@ -376,6 +376,30 @@
         }
       }
     },
+    "/api/matches/{id}/innings/complete": {
+      "put": {
+        "tags": ["Matches"],
+        "summary": "Complete the current innings",
+        "description": "Ends the current innings. The first innings advances to a chase; the second innings completes the match.",
+        "operationId": "completeInnings",
+        "security": [{ "bearerAuth": [] }],
+        "parameters": [{ "$ref": "#/components/parameters/MatchId" }],
+        "responses": {
+          "200": {
+            "description": "Innings completed",
+            "content": {
+              "application/json": {
+                "schema": { "$ref": "#/components/schemas/MatchResponse" }
+              }
+            }
+          },
+          "400": { "$ref": "#/components/responses/BadRequest" },
+          "401": { "$ref": "#/components/responses/Unauthorized" },
+          "403": { "$ref": "#/components/responses/Forbidden" },
+          "404": { "$ref": "#/components/responses/NotFound" }
+        }
+      }
+    },
     "/api/matches/{id}/complete": {
       "put": {
         "tags": ["Matches"],

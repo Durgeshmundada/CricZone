@@ -4,7 +4,7 @@ jest.mock("../models/User", () => ({ find: jest.fn() }));
 
 const Match = require("../models/Match");
 const { configureMatchFromToss } = require("../services/matchSetupService");
-const { processScoreUpdate } = require("../services/scoringService");
+const { completeCurrentInnings, processScoreUpdate } = require("../services/scoringService");
 
 const ownerId = "507f1f77bcf86cd799439011";
 
@@ -104,5 +104,30 @@ describe("scoring service", () => {
       user: { _id: "507f1f77bcf86cd799439099", role: "user" },
       payload: { runs: 1 }
     })).rejects.toMatchObject({ status: 403 });
+  });
+
+  test("manually ends the first innings and prepares the chase", async () => {
+    const match = createMatch();
+    match.innings.first.score = 47;
+    match.teamA.score = 47;
+    match.currentStriker = "Batter";
+    match.currentNonStriker = "Partner";
+    match.currentBowler = "Bowler";
+    Match.findById.mockResolvedValue(match);
+
+    const result = await completeCurrentInnings({
+      matchId: match._id,
+      user: { _id: ownerId, role: "user" }
+    });
+
+    expect(result.inningsComplete).toBe(true);
+    expect(match.currentInning).toBe(2);
+    expect(match.status).toBe("innings_break");
+    expect(match.innings.first.isCompleted).toBe(true);
+    expect(match.innings.second.target).toBe(48);
+    expect(match.innings.second.battingTeam).toBe("teamB");
+    expect(match.currentStriker).toBe("");
+    expect(match.currentBowler).toBe("");
+    expect(match.save).toHaveBeenCalledTimes(1);
   });
 });

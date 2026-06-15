@@ -790,6 +790,16 @@ body {
   font-weight: 700; font-size: 0.85rem; cursor: pointer; transition: all var(--transition);
 }
 .undo-btn:hover { background: rgba(100,116,139,0.2); }
+.innings-actions {
+  margin-top: 1rem; padding-top: 1rem; border-top: 1px solid rgba(148,163,184,0.12);
+}
+.innings-actions p { margin-bottom: 0.65rem; color: var(--ink-dim); font-size: 0.68rem; line-height: 1.45; }
+.end-innings-btn {
+  width: 100%; min-height: 48px; border: 1px solid rgba(251,191,36,0.3); border-radius: var(--radius-md);
+  background: rgba(245,158,11,0.08); color: #fcd34d; padding: 0.65rem 1rem;
+  font: 800 0.8rem/1 'Inter', sans-serif; cursor: pointer; transition: all var(--transition);
+}
+.end-innings-btn:hover { background: rgba(245,158,11,0.16); border-color: rgba(251,191,36,0.5); transform: translateY(-1px); }
 .scoring-page button:active { transform: translateY(0) scale(0.98); }
 .scoring-page button:disabled { opacity: 0.42; cursor: not-allowed; transform: none; box-shadow: none; }
 .scoring-page[aria-busy="true"] .scoring-main-column,

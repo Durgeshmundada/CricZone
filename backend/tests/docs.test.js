@@ -14,5 +14,6 @@ describe("OpenAPI documentation", () => {
       { bearerAuth: [] }
     ]);
     expect(response.body.paths["/api/matches/{id}/score"].put).toBeDefined();
+    expect(response.body.paths["/api/matches/{id}/innings/complete"].put).toBeDefined();
   });
 });

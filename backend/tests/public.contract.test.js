@@ -172,12 +172,15 @@ describe("public app shell contracts", () => {
     expect(html).toContain('<fieldset class="scoring-control-group">');
     expect(html).toContain('<legend>Runs off the bat</legend>');
     expect(html).toContain('id="undoBtn" class="undo-btn" type="button" disabled');
+    expect(html).toContain('id="endInningsBtn" class="end-innings-btn" type="button">End innings</button>');
     expect(styles).toMatch(/\.scoring-workspace\s*\{[^}]*grid-template-columns:/s);
     expect(styles).toMatch(/\.scoring-side-column\s*\{[^}]*position:\s*sticky/s);
     expect(styles).toContain('.scoring-page button:disabled');
     expect(styles).toContain('.scoring-mode #installAppBtn');
     expect(script).toContain("document.body.classList.toggle('scoring-mode', pageId === 'ball-scoring')");
     expect(script).toContain('setScoringControlsDisabled(true)');
+    expect(script).toContain("/innings/complete");
+    expect(script).toContain("document.getElementById('endInningsBtn')?.addEventListener('click', endCurrentInnings)");
     expect(script).toContain("const isIllegalExtra = ball?.isExtra && (ball.extraType === 'wd' || ball.extraType === 'nb')");
     expect(script).toContain('return persistMatchScore(matchId, token, scorePayload)');
   });

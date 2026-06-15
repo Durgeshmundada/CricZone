@@ -391,6 +391,7 @@ let currentMatchData = {
   totalRuns: 0,
   totalWickets: 0,
   balls: [],
+  currentInning: 1,
   battingTeamKey: 'teamA',
   battingOptions: [],
   bowlingOptions: [],
@@ -414,7 +415,7 @@ function setScoringControlsDisabled(disabled) {
 
   scoringPage.dataset.scoringReady = disabled ? 'false' : 'true';
   scoringPage.querySelectorAll(
-    '.run-btn, .extra-btn, .wicket-btn, .undo-btn, .change-player-btn, .swap-batsmen-btn'
+    '.run-btn, .extra-btn, .wicket-btn, .undo-btn, .change-player-btn, .swap-batsmen-btn, .end-innings-btn'
   ).forEach((button) => {
     button.disabled = disabled;
   });
@@ -621,6 +622,7 @@ function openBallScoring(matchId) {
     totalRuns: 0,
     totalWickets: 0,
     balls: [],
+    currentInning: 1,
     battingTeamKey: 'teamA',
     battingOptions: [],
     bowlingOptions: [],
@@ -674,6 +676,7 @@ async function loadMatchForScoring(matchId) {
       const bowlingOptions = buildTeamPlayerOptions(bowlingTeam);
 
       currentMatchData.battingTeamKey = battingTeamKey;
+      currentMatchData.currentInning = Number(inningNumber);
       currentMatchData.battingOptions = battingOptions;
       currentMatchData.bowlingOptions = bowlingOptions;
 
@@ -1344,13 +1347,78 @@ async function persistMatchScore(matchId, token, scorePayload) {
       }
     } else if (currentMatchData.matchId === matchId) {
       setScoringSaveStatus(data.message || 'Score could not be saved', 'error');
+      return { ok: false };
     }
+
+    return {
+      ok: res.ok,
+      inningsComplete: Boolean(data.inningsComplete),
+      matchComplete: Boolean(data.matchComplete)
+    };
 
   } catch (err) {
     console.error('Save score error:', err);
     if (currentMatchData.matchId === matchId) {
       setScoringSaveStatus('Score could not be saved', 'error');
     }
+    return { ok: false };
+  }
+}
+
+async function endCurrentInnings() {
+  const matchId = currentMatchData.matchId;
+  const token = localStorage.getItem('token');
+  if (!matchId || !token) return;
+
+  const isFirstInnings = Number(currentMatchData.currentInning || 1) === 1;
+  const title = isFirstInnings ? 'End first innings?' : 'End second innings?';
+  const consequence = isFirstInnings
+    ? `This will lock the score at ${currentMatchData.totalRuns}/${currentMatchData.totalWickets} and set the chase target to ${currentMatchData.totalRuns + 1}.`
+    : `This will lock the score at ${currentMatchData.totalRuns}/${currentMatchData.totalWickets} and complete the match.`;
+  const confirmed = await modal.confirm(title, `${consequence}\n\nThis action cannot be undone.`);
+  if (!confirmed) return;
+
+  setScoringControlsDisabled(true);
+  setScoringSaveStatus('Saving final innings score...', 'saving');
+
+  const saveResult = await saveMatchScore();
+  if (!saveResult?.ok) {
+    setScoringControlsDisabled(false);
+    await modal.alert('Could Not End Innings', 'The latest score could not be saved. Check your connection and try again.');
+    return;
+  }
+  if (saveResult.inningsComplete || saveResult.matchComplete) return;
+
+  try {
+    setScoringSaveStatus('Ending innings...', 'saving');
+    const response = await fetch(`${API_BASE}/matches/${matchId}/innings/complete`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: '{}'
+    });
+    const data = await response.json();
+
+    if (!response.ok) {
+      throw new Error(data.message || 'Failed to end innings');
+    }
+
+    if (data.matchComplete) {
+      await modal.alert('Match Complete', data.message || 'The match has been completed.');
+      window.showPage('home');
+      return;
+    }
+
+    const target = Number(data.data?.innings?.second?.target || (currentMatchData.totalRuns + 1));
+    await modal.alert('Innings Complete', `First innings closed. The target is ${target}.`);
+    await loadMatchForScoring(matchId);
+  } catch (error) {
+    console.error('End innings error:', error);
+    setScoringSaveStatus(error.message || 'Could not end innings', 'error');
+    setScoringControlsDisabled(false);
+    await modal.alert('Could Not End Innings', error.message || 'Please try again.');
   }
 }
 

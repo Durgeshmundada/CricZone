@@ -555,6 +555,7 @@ document.addEventListener("DOMContentLoaded", async () => {
 
   document.getElementById('wicketBtn')?.addEventListener('click', recordWicket);
   document.getElementById('undoBtn')?.addEventListener('click', undoLastBall);
+  document.getElementById('endInningsBtn')?.addEventListener('click', endCurrentInnings);
   document.getElementById('changeStrikerBtn')?.addEventListener('click', changeStriker);
   document.getElementById('changeNonStrikerBtn')?.addEventListener('click', changeNonStriker);
   document.getElementById('changeBowlerBtn')?.addEventListener('click', changeBowler);
