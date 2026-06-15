@@ -617,70 +617,151 @@
     </div>
   </div>
 
-  <div id="ball-scoring" class="page">
-    <div class="container page-shell">
-      <div class="scoring-header">
-        <button id="backToHome" class="back-btn" type="button">Back</button>
-        <h1 id="scoringMatchName">Match Name</h1>
-      </div>
+  <div id="ball-scoring" class="page scoring-page" aria-busy="false">
+    <div class="container page-shell scoring-shell">
+      <header class="scoring-header">
+        <button id="backToHome" class="back-btn" type="button">
+          <span aria-hidden="true">&larr;</span>
+          My matches
+        </button>
+        <div class="scoring-title-block">
+          <span class="live-score-badge"><span aria-hidden="true"></span>Live scoring</span>
+          <h1 id="scoringMatchName" tabindex="-1">Match Name</h1>
+        </div>
+        <p id="scoringSaveStatus" class="scoring-save-status" role="status" aria-live="polite">Score saves automatically</p>
+      </header>
 
-      <div class="score-display">
-        <div class="team-score">
-          <h2 id="teamBattingName">Team A</h2>
-          <div class="big-score">
-            <span id="currentRuns">0</span>/<span id="currentWickets">0</span>
+      <div class="scoring-workspace">
+        <div class="scoring-main-column">
+          <section class="score-hero" aria-labelledby="teamBattingName">
+            <div class="score-hero-main">
+              <p class="score-kicker">Batting now</p>
+              <h2 id="teamBattingName">Team A</h2>
+              <div class="score-display" role="status" aria-live="polite" aria-atomic="true">
+                <span id="currentRuns">0</span><span class="score-separator">/</span><span id="currentWickets">0</span>
+              </div>
+            </div>
+            <dl class="score-metrics">
+              <div>
+                <dt>Overs</dt>
+                <dd id="currentOvers">0.0</dd>
+              </div>
+              <div>
+                <dt>Run rate</dt>
+                <dd id="currentRunRate">0.00</dd>
+              </div>
+            </dl>
+            <div class="match-meta" aria-label="Match details">
+              <p id="inningsInfo">Innings: 1st</p>
+              <p id="targetInfo">Target: N/A</p>
+              <p id="tossInfo">Toss: not set</p>
+            </div>
+          </section>
+
+          <section class="current-players-panel" aria-labelledby="currentPlayersTitle">
+            <div class="section-heading-row">
+              <div>
+                <p class="panel-eyebrow">At the crease</p>
+                <h2 id="currentPlayersTitle">Current players</h2>
+              </div>
+              <button id="swapBatsmenBtn" class="swap-batsmen-btn" type="button">Swap strike</button>
+            </div>
+
+            <div class="current-player-grid">
+              <div class="batsmen-display">
+                <article class="current-player-card striker-card">
+                  <div class="player-card-topline">
+                    <span class="player-role active-role">Striker</span>
+                    <button id="changeStrikerBtn" class="change-player-btn" type="button">Change</button>
+                  </div>
+                  <h3 id="strikerName">-</h3>
+                  <p class="player-figures"><strong id="strikerRuns">0</strong> runs <span aria-hidden="true">&middot;</span> <span id="strikerBalls">0</span> balls</p>
+                </article>
+
+                <article class="current-player-card">
+                  <div class="player-card-topline">
+                    <span class="player-role">Non-striker</span>
+                    <button id="changeNonStrikerBtn" class="change-player-btn" type="button">Change</button>
+                  </div>
+                  <h3 id="nonStrikerName">-</h3>
+                  <p class="player-figures"><strong id="nonStrikerRuns">0</strong> runs <span aria-hidden="true">&middot;</span> <span id="nonStrikerBalls">0</span> balls</p>
+                </article>
+              </div>
+
+              <article class="current-player-card bowler-display">
+                <div class="player-card-topline">
+                  <span class="player-role bowler-role">Bowler</span>
+                  <button id="changeBowlerBtn" class="change-player-btn" type="button">Change</button>
+                </div>
+                <h3 id="bowlerName">-</h3>
+                <p class="player-figures"><strong id="bowlerOvers">0.0</strong> overs <span aria-hidden="true">&middot;</span> <span id="bowlerRuns">0</span> runs <span aria-hidden="true">&middot;</span> <span id="bowlerWickets">0</span> wickets</p>
+              </article>
+            </div>
+          </section>
+
+          <section class="over-display" aria-labelledby="currentOverTitle">
+            <div class="section-heading-row compact-heading">
+              <div>
+                <p class="panel-eyebrow">Ball by ball</p>
+                <h2 id="currentOverTitle">Current over</h2>
+              </div>
+              <span class="over-legend">WD / NB do not count as legal balls</span>
+            </div>
+            <div id="overBalls" class="over-balls" role="list" aria-live="polite">
+              <span class="over-empty">No deliveries yet</span>
+            </div>
+          </section>
+
+          <details class="lineup-hints">
+            <summary>Available players</summary>
+            <p id="battingSquadHint">Batting options: not loaded</p>
+            <p id="bowlingSquadHint">Bowling options: not loaded</p>
+          </details>
+        </div>
+
+        <aside class="scoring-side-column" aria-label="Scoring controls">
+          <div class="scoring-pad">
+            <p class="panel-eyebrow">Scoring controls</p>
+            <h2>Record this delivery</h2>
+            <p class="scoring-pad-copy">Choose the result of the ball. The scorecard updates and saves automatically.</p>
+
+            <fieldset class="scoring-control-group">
+              <legend>Runs off the bat</legend>
+              <div class="runs-buttons">
+                <button class="run-btn" type="button" data-runs="0" aria-label="Record dot ball">0<span>Dot</span></button>
+                <button class="run-btn" type="button" data-runs="1" aria-label="Record 1 run">1<span>Run</span></button>
+                <button class="run-btn" type="button" data-runs="2" aria-label="Record 2 runs">2<span>Runs</span></button>
+                <button class="run-btn" type="button" data-runs="3" aria-label="Record 3 runs">3<span>Runs</span></button>
+                <button class="run-btn four-btn" type="button" data-runs="4" aria-label="Record 4 runs">4<span>Four</span></button>
+                <button class="run-btn six-btn" type="button" data-runs="6" aria-label="Record 6 runs">6<span>Six</span></button>
+              </div>
+            </fieldset>
+
+            <fieldset class="scoring-control-group extras-group">
+              <legend>Extras</legend>
+              <div class="extras-buttons">
+                <button class="extra-btn" type="button" data-extra="wd"><strong>WD</strong><span>Wide</span></button>
+                <button class="extra-btn" type="button" data-extra="nb"><strong>NB</strong><span>No ball</span></button>
+                <button class="extra-btn" type="button" data-extra="bye"><strong>B</strong><span>Bye</span></button>
+                <button class="extra-btn" type="button" data-extra="lb"><strong>LB</strong><span>Leg bye</span></button>
+              </div>
+            </fieldset>
+
+            <div class="wicket-buttons">
+              <button id="wicketBtn" class="wicket-btn" type="button"><span aria-hidden="true">W</span> Record wicket</button>
+              <button id="undoBtn" class="undo-btn" type="button" disabled>Undo last ball</button>
+            </div>
           </div>
-          <p>Overs: <span id="currentOvers">0.0</span></p>
-          <p>Run Rate: <span id="currentRunRate">0.00</span></p>
+        </aside>
+      </div>
+
+      <section class="detailed-scoreboard" aria-labelledby="fullScorecardTitle">
+        <div class="scorecard-section-heading">
+          <p class="panel-eyebrow">Match detail</p>
+          <h2 id="fullScorecardTitle">Full scorecard</h2>
         </div>
-      </div>
-
-      <div class="batsmen-display">
-        <div class="batsman">
-          <div class="player-line">
-            <p><strong>Striker:</strong> <span id="strikerName">-</span></p>
-            <button id="changeStrikerBtn" class="change-player-btn" type="button">Swap</button>
-          </div>
-          <p><span id="strikerRuns">0</span> (<span id="strikerBalls">0</span>)</p>
-        </div>
-        <div class="batsman">
-          <div class="player-line">
-            <p><strong>Non-Striker:</strong> <span id="nonStrikerName">-</span></p>
-            <button id="changeNonStrikerBtn" class="change-player-btn" type="button">Swap</button>
-          </div>
-          <p><span id="nonStrikerRuns">0</span> (<span id="nonStrikerBalls">0</span>)</p>
-        </div>
-        <button id="swapBatsmenBtn" class="swap-batsmen-btn" type="button">Swap Batsmen</button>
-      </div>
-
-      <div class="bowler-display">
-        <div class="player-line">
-          <p><strong>Bowler:</strong> <span id="bowlerName">-</span></p>
-          <button id="changeBowlerBtn" class="change-player-btn" type="button">Swap</button>
-        </div>
-        <p><span id="bowlerOvers">0.0</span> overs, <span id="bowlerRuns">0</span> runs, <span id="bowlerWickets">0</span> wickets</p>
-      </div>
-
-      <div class="lineup-hints">
-        <p id="battingSquadHint">Batting options: not loaded</p>
-        <p id="bowlingSquadHint">Bowling options: not loaded</p>
-      </div>
-
-      <div class="match-meta">
-        <p id="tossInfo">Toss: not set</p>
-        <p id="inningsInfo">Innings: 1st</p>
-        <p id="targetInfo">Target: N/A</p>
-      </div>
-
-
-      <div class="over-display">
-        <p>Current Over:</p>
-        <div id="overBalls" class="over-balls"></div>
-      </div>
-
-      <div class="detailed-scoreboard">
         <div class="scoreboard-panel">
-          <h2>Batting</h2>
+          <h3>Batting</h3>
           <div class="table-wrap">
             <table class="score-table">
               <caption class="visually-hidden">Batting scorecard</caption>
@@ -703,7 +784,7 @@
         </div>
 
         <div class="scoreboard-panel">
-          <h2>Bowling</h2>
+          <h3>Bowling</h3>
           <div class="table-wrap">
             <table class="score-table">
               <caption class="visually-hidden">Bowling scorecard</caption>
@@ -726,39 +807,12 @@
         </div>
 
         <div class="scoreboard-panel">
-          <h2>Fall of Wickets</h2>
+          <h3>Fall of wickets</h3>
           <ul id="fallOfWicketsList" class="fow-list">
             <li>No wickets yet.</li>
           </ul>
         </div>
-      </div>
-
-
-      <div class="scoring-pad">
-        <h2>Record Ball</h2>
-
-        <div class="runs-buttons">
-          <button class="run-btn" type="button" data-runs="0" aria-label="Record dot ball">0</button>
-          <button class="run-btn" type="button" data-runs="1" aria-label="Record 1 run">1</button>
-          <button class="run-btn" type="button" data-runs="2" aria-label="Record 2 runs">2</button>
-          <button class="run-btn" type="button" data-runs="3" aria-label="Record 3 runs">3</button>
-          <button class="run-btn four-btn" type="button" data-runs="4" aria-label="Record 4 runs">4</button>
-          <button class="run-btn six-btn" type="button" data-runs="6" aria-label="Record 6 runs">6</button>
-        </div>
-
-        <div class="extras-buttons">
-          <button class="extra-btn" type="button" data-extra="wd">WD (Wide)</button>
-          <button class="extra-btn" type="button" data-extra="nb">NB (No Ball)</button>
-          <button class="extra-btn" type="button" data-extra="bye">BYE</button>
-          <button class="extra-btn" type="button" data-extra="lb">LB (Leg Bye)</button>
-        </div>
-
-        <div class="wicket-buttons">
-          <button id="wicketBtn" class="wicket-btn" type="button">OUT</button>
-          <button id="undoBtn" class="undo-btn" type="button">UNDO</button>
-        </div>
-      </div>
-
+      </section>
     </div>
   </div>
 
