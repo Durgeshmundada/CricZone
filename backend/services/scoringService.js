@@ -481,6 +481,7 @@ const rebuildInningFromBallEvents = (match, inningNumber, rawEvents = []) => {
 };
 
 const completeOrAdvanceInnings = async (match, currentInningNum, currentInning) => {
+  currentInning.isComplete = true;
   currentInning.isCompleted = true;
 
   if (currentInningNum === 1) {
@@ -489,6 +490,12 @@ const completeOrAdvanceInnings = async (match, currentInningNum, currentInning) 
     match.innings.second.target = currentInning.score + 1;
     match.innings.second.battingTeam = currentInning.battingTeam === 'teamA' ? 'teamB' : 'teamA';
     match.innings.second.bowlingTeam = currentInning.battingTeam === 'teamA' ? 'teamA' : 'teamB';
+    match.currentStriker = '';
+    match.currentStrikerId = null;
+    match.currentNonStriker = '';
+    match.currentNonStrikerId = null;
+    match.currentBowler = '';
+    match.currentBowlerId = null;
 
     await match.save();
     return {
@@ -502,6 +509,38 @@ const completeOrAdvanceInnings = async (match, currentInningNum, currentInning) 
   return {
     matchComplete: true,
     message: 'Match completed.'
+  };
+};
+
+const completeCurrentInnings = async ({ matchId, user }) => {
+  const match = await Match.findById(matchId);
+  if (!match) throw new ServiceError(404, 'Match not found');
+
+  const isOwner = match.createdBy.toString() === user._id.toString();
+  const isPrivilegedRole = ['admin', 'organizer', 'scorer'].includes(user.role);
+  if (!isOwner && !isPrivilegedRole) {
+    throw new ServiceError(403, 'Not authorized to end this innings');
+  }
+
+  if (match.status === 'completed') {
+    throw new ServiceError(400, 'Match is already completed');
+  }
+
+  if (match.status === 'scheduled' || match.status === 'upcoming') {
+    throw new ServiceError(400, 'Start the match before ending an innings');
+  }
+
+  const currentInningNum = Number(match.currentInning || 1);
+  const inningKey = currentInningNum === 1 ? 'first' : 'second';
+  const currentInning = match.innings?.[inningKey];
+  if (!currentInning) {
+    throw new ServiceError(400, 'Current innings data is unavailable');
+  }
+
+  const result = await completeOrAdvanceInnings(match, currentInningNum, currentInning);
+  return {
+    data: match,
+    ...result
   };
 };
 
@@ -592,7 +631,7 @@ const processScoreUpdate = async ({ matchId, user, payload }) => {
       };
     }
 
-    if (match.status === 'scheduled' || match.status === 'upcoming') {
+    if (match.status === 'scheduled' || match.status === 'upcoming' || match.status === 'innings_break') {
       match.status = 'live';
     }
 
@@ -1028,6 +1067,7 @@ async function updatePlayerStats(match) {
 }
 
 module.exports = {
+  completeCurrentInnings,
   completeMatchLogic,
   processScoreUpdate
 };

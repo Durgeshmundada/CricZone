@@ -192,19 +192,56 @@ describe("Match API scoring lifecycle", () => {
     expect(undoResponse.body.data.innings.first.wickets).toBe(0);
     expect(undoResponse.body.data.ballByBallData.filter((b) => b.inning === 1)).toHaveLength(2);
 
+    const forbiddenEndInnings = await api
+      .put(`/api/matches/${matchId}/innings/complete`)
+      .set("Authorization", `Bearer ${opponentToken}`)
+      .send({});
+    expect(forbiddenEndInnings.status).toBe(403);
+
+    const endFirstInnings = await api
+      .put(`/api/matches/${matchId}/innings/complete`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({});
+
+    expect(endFirstInnings.status).toBe(200);
+    expect(endFirstInnings.body.inningsComplete).toBe(true);
+    expect(endFirstInnings.body.data.currentInning).toBe(2);
+    expect(endFirstInnings.body.data.status).toBe("innings_break");
+    expect(endFirstInnings.body.data.innings.second.target).toBe(2);
+    expect(endFirstInnings.body.data.currentStriker).toBe("");
+
     const forbiddenComplete = await api
       .put(`/api/matches/${matchId}/complete`)
       .set("Authorization", `Bearer ${opponentToken}`)
       .send({});
     expect(forbiddenComplete.status).toBe(403);
 
+    const secondInningsScore = await api
+      .put(`/api/matches/${matchId}/score`)
+      .set("Authorization", `Bearer ${ownerToken}`)
+      .send({
+        mode: "absolute",
+        runs: 0,
+        wickets: 0,
+        overs: "0.0",
+        batsmanName: opponent.user.name,
+        batsmanId: opponentPlayerId,
+        nonStrikerName: "Beta Partner",
+        bowlerName: owner.user.name,
+        bowlerId: ownerPlayerId,
+        ballEvents: []
+      });
+    expect(secondInningsScore.status).toBe(200);
+    expect(secondInningsScore.body.data.status).toBe("live");
+
     const completeResponse = await api
-      .put(`/api/matches/${matchId}/complete`)
+      .put(`/api/matches/${matchId}/innings/complete`)
       .set("Authorization", `Bearer ${ownerToken}`)
       .send({});
 
     expect(completeResponse.status).toBe(200);
     expect(completeResponse.body.success).toBe(true);
+    expect(completeResponse.body.matchComplete).toBe(true);
     expect(completeResponse.body.data.status).toBe("completed");
 
     const completeAgainResponse = await api
