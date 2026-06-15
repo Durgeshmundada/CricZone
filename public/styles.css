@@ -732,7 +732,7 @@ body {
    MODAL
    ============================================ */
 .modal-overlay {
-  position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 2000;
+  position: absolute; inset: 0; background: rgba(0,0,0,0.7); z-index: 0;
   backdrop-filter: blur(6px); opacity: 0; visibility: hidden; transition: opacity 0.3s ease;
 }
 .custom-modal { position: fixed; inset: 0; z-index: 2001; display: flex; align-items: center; justify-content: center; opacity: 0; visibility: hidden; transition: opacity 0.3s ease; pointer-events: none; }
@@ -740,7 +740,7 @@ body {
 .modal-content {
   background: var(--bg-surface); border: 1px solid var(--glass-border);
   border-radius: var(--radius-xl); padding: 2rem; max-width: 440px; width: 90%;
-  position: relative; z-index: 2; box-shadow: var(--shadow-lg);
+  position: relative; z-index: 1; box-shadow: var(--shadow-lg);
 }
 .modal-content h2 { font-family: 'Outfit', sans-serif; font-size: 1.2rem; font-weight: 700; margin-bottom: 0.6rem; color: var(--ink); }
 .modal-content p { font-size: 0.9rem; color: var(--ink-muted); margin-bottom: 1rem; white-space: pre-line; }
