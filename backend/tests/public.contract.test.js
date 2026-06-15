@@ -160,6 +160,28 @@ describe("public app shell contracts", () => {
     expect(styles).toContain("prefers-reduced-motion: reduce");
   });
 
+  test("ships a responsive and accessible live scoring workspace", () => {
+    const html = fs.readFileSync(publicIndexPath, "utf8");
+    const script = readPublicScripts();
+    const styles = fs.readFileSync(publicStylesPath, "utf8");
+
+    expect(html).toContain('id="ball-scoring" class="page scoring-page" aria-busy="false"');
+    expect(html).toContain('class="scoring-workspace"');
+    expect(html).toContain('class="score-display" role="status" aria-live="polite" aria-atomic="true"');
+    expect(html).toContain('id="overBalls" class="over-balls" role="list" aria-live="polite"');
+    expect(html).toContain('<fieldset class="scoring-control-group">');
+    expect(html).toContain('<legend>Runs off the bat</legend>');
+    expect(html).toContain('id="undoBtn" class="undo-btn" type="button" disabled');
+    expect(styles).toMatch(/\.scoring-workspace\s*\{[^}]*grid-template-columns:/s);
+    expect(styles).toMatch(/\.scoring-side-column\s*\{[^}]*position:\s*sticky/s);
+    expect(styles).toContain('.scoring-page button:disabled');
+    expect(styles).toContain('.scoring-mode #installAppBtn');
+    expect(script).toContain("document.body.classList.toggle('scoring-mode', pageId === 'ball-scoring')");
+    expect(script).toContain('setScoringControlsDisabled(true)');
+    expect(script).toContain("const isIllegalExtra = ball?.isExtra && (ball.extraType === 'wd' || ball.extraType === 'nb')");
+    expect(script).toContain('return persistMatchScore(matchId, token, scorePayload)');
+  });
+
   test("ships an upgrade-safe PWA without placeholder analytics", () => {
     const html = fs.readFileSync(publicIndexPath, "utf8");
     const script = readPublicScripts();

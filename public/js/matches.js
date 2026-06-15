@@ -310,6 +310,7 @@ function updateHomeMetrics(matchesInput, tournamentsInput) {
 
 function showPage(pageId) {  
   window.scrollTo(0, 0);
+  document.body.classList.toggle('scoring-mode', pageId === 'ball-scoring');
   
   const pages = document.querySelectorAll(".page");
   const targetPage = document.getElementById(pageId);
@@ -397,6 +398,32 @@ let currentMatchData = {
   nonStriker: { id: null, name: '', runs: 0, balls: 0 },
   bowler: { id: null, name: '', runs: 0, wickets: 0, balls: 0 }
 };
+let scoreSaveQueue = Promise.resolve();
+
+function setScoringSaveStatus(message, state = 'idle') {
+  const status = document.getElementById('scoringSaveStatus');
+  if (!status) return;
+
+  status.textContent = message;
+  status.dataset.state = state;
+}
+
+function setScoringControlsDisabled(disabled) {
+  const scoringPage = document.getElementById('ball-scoring');
+  if (!scoringPage) return;
+
+  scoringPage.dataset.scoringReady = disabled ? 'false' : 'true';
+  scoringPage.querySelectorAll(
+    '.run-btn, .extra-btn, .wicket-btn, .undo-btn, .change-player-btn, .swap-batsmen-btn'
+  ).forEach((button) => {
+    button.disabled = disabled;
+  });
+
+  if (!disabled) {
+    const undoButton = document.getElementById('undoBtn');
+    if (undoButton) undoButton.disabled = currentMatchData.balls.length === 0;
+  }
+}
 
 const normalizePlayerOption = (player) => {
   if (!player) return null;
@@ -601,6 +628,16 @@ function openBallScoring(matchId) {
     nonStriker: { id: null, name: '', runs: 0, balls: 0 },
     bowler: { id: null, name: '', runs: 0, wickets: 0, balls: 0 }
   };
+
+  const scoringPage = document.getElementById('ball-scoring');
+  if (scoringPage) scoringPage.setAttribute('aria-busy', 'true');
+  const matchName = document.getElementById('scoringMatchName');
+  const battingTeamName = document.getElementById('teamBattingName');
+  if (matchName) matchName.textContent = 'Loading match...';
+  if (battingTeamName) battingTeamName.textContent = 'Batting team';
+  setScoringControlsDisabled(true);
+  setScoringSaveStatus('Loading scorecard...', 'saving');
+  updateScoringDisplay();
   
   loadMatchForScoring(matchId);
   window.showPage('ball-scoring');
@@ -622,6 +659,7 @@ async function loadMatchForScoring(matchId) {
       const match = data.data || data.match || data;
       
       if (!match) {
+        setScoringSaveStatus('Match data could not be loaded', 'error');
         showToast('Match data not found', 'error');
         return;
       }
@@ -758,16 +796,23 @@ async function loadMatchForScoring(matchId) {
         updateScoringDisplay();
       }
       renderDetailedScoreboard(match);
+      setScoringControlsDisabled(false);
+      setScoringSaveStatus('Ready - score saves automatically', 'saved');
       
       showToast('Match loaded successfully!', 'success');
       
     } else {
+      setScoringSaveStatus('Match data could not be loaded', 'error');
       showToast(data.message || 'Failed to load match', 'error');
     }
 
   } catch (err) {
     console.error('Load match error:', err);
+    setScoringSaveStatus('Match data could not be loaded', 'error');
     showToast('Failed to load match', 'error');
+  } finally {
+    const scoringPage = document.getElementById('ball-scoring');
+    if (scoringPage) scoringPage.setAttribute('aria-busy', 'false');
   }
 }
 
@@ -858,6 +903,20 @@ function updateScoringDisplay() {
     formatOversFromBallCount(currentMatchData.bowler.balls);
   document.getElementById('bowlerRuns').textContent = currentMatchData.bowler.runs;
   document.getElementById('bowlerWickets').textContent = currentMatchData.bowler.wickets;
+
+  const scoreDisplay = document.querySelector('#ball-scoring .score-display');
+  if (scoreDisplay) {
+    scoreDisplay.setAttribute(
+      'aria-label',
+      `${currentMatchData.totalRuns} runs for ${currentMatchData.totalWickets} wickets`
+    );
+  }
+
+  const scoringPage = document.getElementById('ball-scoring');
+  const undoButton = document.getElementById('undoBtn');
+  if (undoButton) {
+    undoButton.disabled = scoringPage?.dataset.scoringReady !== 'true' || currentMatchData.balls.length === 0;
+  }
   
   updateOverDisplay();
 }
@@ -867,13 +926,40 @@ function updateOverDisplay() {
   if (!overBalls) return;
   
   overBalls.innerHTML = '';
-  const startIndex = Math.max(0, currentMatchData.balls.length - 6);
-  const lastBalls = currentMatchData.balls.slice(startIndex);
-  
-  lastBalls.forEach(ball => {
+  const completedOvers = [];
+  let activeOver = [];
+  let legalBalls = 0;
+
+  currentMatchData.balls.forEach((ball) => {
+    activeOver.push(ball);
+    const isIllegalExtra = ball?.isExtra && (ball.extraType === 'wd' || ball.extraType === 'nb');
+    if (!isIllegalExtra) legalBalls += 1;
+
+    if (legalBalls === 6) {
+      completedOvers.push(activeOver);
+      activeOver = [];
+      legalBalls = 0;
+    }
+  });
+
+  const displayedBalls = activeOver.length > 0
+    ? activeOver
+    : (completedOvers[completedOvers.length - 1] || []);
+
+  if (displayedBalls.length === 0) {
+    const empty = document.createElement('span');
+    empty.className = 'over-empty';
+    empty.textContent = 'No deliveries yet';
+    overBalls.appendChild(empty);
+    return;
+  }
+
+  displayedBalls.forEach((ball, index) => {
     const circle = document.createElement('div');
     circle.className = `ball-circle ${ball.class}`;
     circle.textContent = ball.display;
+    circle.setAttribute('role', 'listitem');
+    circle.setAttribute('aria-label', `Delivery ${index + 1}: ${ball.display}`);
     overBalls.appendChild(circle);
   });
 }
@@ -1179,51 +1265,74 @@ function undoLastBall() {
   saveMatchScore();
 }
 
-async function saveMatchScore() {
+function buildCurrentScorePayload() {
+  return {
+    mode: 'absolute',
+    runs: currentMatchData.totalRuns,
+    wickets: currentMatchData.totalWickets,
+    overs: formatOversFromBallCount(currentMatchData.currentBall),
+    batsmanName: currentMatchData.striker.name,
+    batsmanId: currentMatchData.striker.id || null,
+    nonStrikerName: currentMatchData.nonStriker.name,
+    nonStrikerId: currentMatchData.nonStriker.id || null,
+    bowlerName: currentMatchData.bowler.name,
+    bowlerId: currentMatchData.bowler.id || null,
+    ballEvents: currentMatchData.balls.map((ball) => ({
+      runs: Number(ball?.runs || 0),
+      isExtra: Boolean(ball?.isExtra),
+      extraType: ball?.extraType || null,
+      isWicket: Boolean(ball?.isWicket),
+      strikerName: ball?.strikerName || '',
+      strikerId: ball?.strikerId || null,
+      nonStrikerName: ball?.nonStrikerName || '',
+      nonStrikerId: ball?.nonStrikerId || null,
+      bowlerName: ball?.bowlerName || '',
+      bowlerId: ball?.bowlerId || null,
+      wicketPlayerName: ball?.wicketPlayerName || null,
+      wicketPlayerId: ball?.wicketPlayerId || null,
+      wicketKind: ball?.wicketKind || null
+    })),
+    status: 'live'
+  };
+}
+
+function saveMatchScore() {
+  const token = localStorage.getItem('token');
+  const matchId = currentMatchData.matchId;
+  if (!token || !matchId) return Promise.resolve();
+
+  const scorePayload = buildCurrentScorePayload();
+  setScoringSaveStatus('Saving score...', 'saving');
+  scoreSaveQueue = scoreSaveQueue
+    .catch(() => undefined)
+    .then(() => {
+      if (currentMatchData.matchId === matchId) {
+        setScoringSaveStatus('Saving score...', 'saving');
+      }
+      return persistMatchScore(matchId, token, scorePayload);
+    });
+
+  return scoreSaveQueue;
+}
+
+async function persistMatchScore(matchId, token, scorePayload) {
   try {
-    const token = localStorage.getItem('token');
-    if (!token || !currentMatchData.matchId) return;
-    
-    const res = await fetch(`${API_BASE}/matches/${currentMatchData.matchId}/score`, {
+    const res = await fetch(`${API_BASE}/matches/${matchId}/score`, {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${token}`
       },
-      body: JSON.stringify({
-        mode: 'absolute',
-        runs: currentMatchData.totalRuns,
-        wickets: currentMatchData.totalWickets,
-        overs: formatOversFromBallCount(currentMatchData.currentBall),
-        batsmanName: currentMatchData.striker.name,
-        batsmanId: currentMatchData.striker.id || null,
-        nonStrikerName: currentMatchData.nonStriker.name,
-        nonStrikerId: currentMatchData.nonStriker.id || null,
-        bowlerName: currentMatchData.bowler.name,
-        bowlerId: currentMatchData.bowler.id || null,
-        ballEvents: currentMatchData.balls.map((ball) => ({
-          runs: Number(ball?.runs || 0),
-          isExtra: Boolean(ball?.isExtra),
-          extraType: ball?.extraType || null,
-          isWicket: Boolean(ball?.isWicket),
-          strikerName: ball?.strikerName || '',
-          strikerId: ball?.strikerId || null,
-          nonStrikerName: ball?.nonStrikerName || '',
-          nonStrikerId: ball?.nonStrikerId || null,
-          bowlerName: ball?.bowlerName || '',
-          bowlerId: ball?.bowlerId || null,
-          wicketPlayerName: ball?.wicketPlayerName || null,
-          wicketPlayerId: ball?.wicketPlayerId || null,
-          wicketKind: ball?.wicketKind || null
-        })),
-        status: 'live'
-      })
+      body: JSON.stringify(scorePayload)
     });
 
     const data = await res.json();
     
     if (res.ok) {
-      if (data?.data) {
+      if (currentMatchData.matchId === matchId) {
+        setScoringSaveStatus('Saved just now', 'saved');
+      }
+      if (data?.data && currentMatchData.matchId === matchId) {
         renderDetailedScoreboard(data.data);
       }
       if (data.inningsComplete) {
@@ -1233,10 +1342,15 @@ async function saveMatchScore() {
         await modal.alert('Match Complete!', data.message);
         window.showPage('home');
       }
+    } else if (currentMatchData.matchId === matchId) {
+      setScoringSaveStatus(data.message || 'Score could not be saved', 'error');
     }
 
   } catch (err) {
     console.error('Save score error:', err);
+    if (currentMatchData.matchId === matchId) {
+      setScoringSaveStatus('Score could not be saved', 'error');
+    }
   }
 }
 
